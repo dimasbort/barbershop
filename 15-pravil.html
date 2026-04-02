@@ -48,15 +48,6 @@
 
 </head>
 <body id="onepage">
-	<script>
-		var yWidgetSettings = {
-			buttonColor : '#b59e5c',
-			buttonPosition : 'bottom right',
-			buttonAutoShow : true,
-			buttonText : 'Онлайн запись',
-			formPosition : 'right'
-		};
-	</script>
 	
 <div class="wrapper">
 	<!-- INTRO -->
@@ -339,7 +330,20 @@
 
 <script src="https://maps.googleapis.com/maps/api/js?sensor=false"></script>
 <script src="js/gmap.js"></script>
-<script type="text/javascript" src="https://w312670.yclients.com/widgetJS" charset="UTF-8"></script>
+    <!-- Плавающая кнопка онлайн-записи -->
+    <div id="floating-booking">
+      <span>Онлайн запись</span>
+    </div>
+
+    <script>
+      document.getElementById('floating-booking').onclick = () => {
+        const modal = document.getElementById('booking-modal');
+        if (modal) { modal.classList.add('active'); loadSpecialists(); }
+      };
+    </script>
+
+    <link rel="stylesheet" href="/booking-widget/booking.css">
+    <script src="/booking-widget/booking.js"></script>
 
 </body>
 
