@@ -272,15 +272,25 @@ function selectDay(dateStr, el) {
     return;
   }
 
-  // Делим слоты на «День» и «Вечер» (до 18:00 и после)
-  const morning = dayData.slots.filter(s => new Date(s).getHours() < 18);
+  // Делим слоты на «Утро», «День» и «Вечер»
+  const morning = dayData.slots.filter(s => new Date(s).getHours() < 12);
+  const day = dayData.slots.filter(s => new Date(s).getHours() >= 12 && new Date(s).getHours() < 18);
   const evening = dayData.slots.filter(s => new Date(s).getHours() >= 18);
 
   let html = "";
 
   if (morning.length) {
-    html += `<div class="slots-header">День</div><div class="slots-grid">`;
+    html += `<div class="slots-header">Утро</div><div class="slots-grid">`;
     morning.forEach(sl => {
+      const t = new Date(sl).toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"});
+      html += `<div class="time-slot" onclick="chooseSlot('${sl}', this)">${t}</div>`;
+    });
+    html += `</div>`;
+  }
+
+  if (day.length) {
+    html += `<div class="slots-header">День</div><div class="slots-grid">`;
+    day.forEach(sl => {
       const t = new Date(sl).toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"});
       html += `<div class="time-slot" onclick="chooseSlot('${sl}', this)">${t}</div>`;
     });
@@ -411,7 +421,7 @@ async function submitBooking() {
       <p>${bookingData.serviceName}</p>
       <p>${dt.toLocaleDateString("ru-RU", {weekday:"long", day:"numeric", month:"long"})},
          ${dt.toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"})}</p>
-      <div class="booking-btn" style="margin-top:20px" onclick="closeModal()">Закрыть</div>
+    <div class="booking-btn" style="margin-top:20px" onclick="closeModal()">Закрыть</div>  
     </div>
   `;
 }
