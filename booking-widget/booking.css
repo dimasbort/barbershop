@@ -1,0 +1,525 @@
+/* --- Общие стили модального окна --- */
+
+#booking-modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.65);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  animation: fadeIn 0.3s ease;
+}
+
+#booking-modal.active {
+  display: flex;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* --- Контейнер виджета --- */
+
+.booking-wrapper {
+  background: #191919;
+  width: 100%;
+  max-width: 450px;
+  height: 90%;
+  border-radius: 16px;
+  overflow-y: auto;
+  color: white;
+  font-family: "Montserrat", sans-serif;
+  transform: translateY(20px);
+  animation: slideUp 0.35s ease forwards;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(50px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+/* --- Заголовки --- */
+
+.booking-header {
+  padding: 20px;
+  font-size: 22px;
+  font-weight: 700;
+  border-bottom: 1px solid #333;
+}
+
+/* --- Шаги --- */
+
+.booking-step {
+  display: none;
+  padding: 20px;
+}
+
+.booking-step.active {
+  display: block;
+}
+
+/* --- Карточки списка (специалисты, услуги, время) --- */
+
+.booking-card {
+  background: #222;
+  padding: 15px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: 0.25s;
+  border: 1px solid transparent;
+}
+
+.booking-card:hover {
+  border: 1px solid #d6a354;
+}
+
+/* Фото специалиста */
+.booking-card img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  margin-right: 14px;
+  object-fit: cover;
+}
+
+/* Текст внутри карточки */
+.booking-card-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.booking-card-sub {
+  font-size: 14px;
+  color: #aaa;
+}
+
+/* --- Кнопки --- */
+
+.booking-btn {
+  width: 100%;
+  padding: 14px;
+  background: #d6a354;
+  color: #000;
+  text-align: center;
+  border-radius: 12px;
+  margin-top: 20px;
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+  transition: 0.25s;
+}
+
+.booking-btn:hover {
+  background: #f3c46d;
+}
+
+/* --- Поля ввода --- */
+
+.booking-input {
+  width: 100%;
+  padding: 14px;
+  background: #222;
+  border: 1px solid #333;
+  border-radius: 12px;
+  color: white;
+  margin-bottom: 14px;
+  font-size: 16px;
+}
+
+.booking-input:focus {
+  border: 1px solid #d6a354;
+  outline: none;
+}
+
+/* Время (слот) */
+
+.time-slot {
+  background: #222;
+  padding: 14px;
+  border-radius: 12px;
+  display: inline-block;
+  margin: 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.time-slot:hover {
+  border: 1px solid #d6a354;
+}
+
+/* --- Сообщение успеха --- */
+
+.success-message {
+  text-align: center;
+  margin-top: 40px;
+  font-size: 18px;
+}
+
+/* ===== Плавающая кнопка ===== */
+
+#floating-booking {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  z-index: 9998;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: rgba(181,158,92,0.6);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(181,158,92,0.5);
+  animation: pulse 2s infinite;
+  transition: transform 0.2s ease;
+}
+
+#floating-booking:hover {
+  transform: scale(1.08);
+  animation: none;
+}
+
+#floating-booking span {
+  color: white;
+  font-size: 15px;
+  font-weight: 400;
+  font-family: 'Play';
+  letter-spacing: 1.5px;
+  line-height: 25px;
+  padding: 0 10px;
+  pointer-events: none;
+}
+
+/* Пульсация */
+@keyframes pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(181,158,92,0.6); }
+  70%  { box-shadow: 0 0 0 18px rgba(181,158,92,0); }
+  100% { box-shadow: 0 0 0 0 rgba(181,158,92,0); }
+}
+
+/* ===== Календарь ===== */
+
+.booking-calendar {
+  padding: 0 20px 20px;
+}
+
+.calendar-month-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0 12px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.calendar-month-nav button {
+  background: none;
+  border: none;
+  color: #b59e5c;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 10px;
+}
+
+.calendar-month-nav button:disabled {
+  color: #444;
+  cursor: default;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.calendar-weekday {
+  text-align: center;
+  font-size: 12px;
+  color: #888;
+  padding: 6px 0;
+  font-weight: 600;
+}
+
+.calendar-day {
+  text-align: center;
+  padding: 10px 4px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: default;
+  color: #555;
+  transition: 0.2s;
+}
+
+/* Доступный день */
+.calendar-day.available {
+  color: #fff;
+  cursor: pointer;
+  background: #2a2a2a;
+}
+
+.calendar-day.available:hover {
+  background: #b59e5c;
+  color: #000;
+}
+
+/* Выбранный день */
+.calendar-day.selected {
+  background: #b59e5c;
+  color: #000;
+  font-weight: 700;
+}
+
+/* Сегодня */
+.calendar-day.today {
+  border: 1px solid #b59e5c;
+  color: #b59e5c;
+}
+
+.calendar-day.today.available {
+  color: #fff;
+  border-color: #fff;
+}
+
+/* Пустая ячейка */
+.calendar-day.empty {
+  background: none;
+}
+
+/* ===== Слоты времени ===== */
+
+.slots-header {
+  font-size: 16px;
+  font-weight: 700;
+  padding: 16px 20px 10px;
+  color: #fff;
+}
+
+.slots-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 0 20px 20px;
+}
+
+.time-slot {
+  background: #2a2a2a;
+  padding: 12px 6px;
+  border-radius: 10px;
+  text-align: center;
+  font-size: 15px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  color: #fff;
+  transition: 0.2s;
+}
+
+.time-slot:hover {
+  border-color: #b59e5c;
+  color: #b59e5c;
+}
+
+.time-slot.selected {
+  background: #b59e5c;
+  color: #000;
+  font-weight: 700;
+  border-color: #b59e5c;
+}
+
+/* Нет слотов */
+.no-slots {
+  text-align: center;
+  padding: 30px 20px;
+  color: #888;
+  font-size: 15px;
+}
+
+.no-slots span {
+  font-size: 36px;
+  display: block;
+  margin-bottom: 10px;
+}
+
+/* ===== Шапка виджета ===== */
+
+.booking-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.booking-top-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.booking-back,
+.booking-close {
+  background: none;
+  border: none;
+  color: #b59e5c;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  line-height: 1;
+}
+
+.booking-back:hover,
+.booking-close:hover {
+  color: #fff;
+}
+
+/* ===== Заголовок секции ===== */
+
+.booking-section-title {
+  font-size: 18px;
+  font-weight: 700;
+  padding: 16px 20px 10px;
+  color: #fff;
+}
+
+/* ===== Сводка записи ===== */
+
+.booking-summary {
+  background: #222;
+  border-radius: 12px;
+  margin: 0 20px;
+  padding: 16px;
+}
+
+.summary-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.summary-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-right: 12px;
+}
+
+.summary-icon {
+  width: 44px;
+  text-align: center;
+  font-size: 22px;
+  margin-right: 12px;
+}
+
+.summary-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.summary-sub {
+  font-size: 13px;
+  color: #888;
+}
+
+.summary-divider {
+  border-top: 1px solid #333;
+  margin: 10px 0;
+}
+
+.summary-service-row,
+.summary-total-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 15px;
+  color: #ccc;
+  margin-bottom: 8px;
+}
+
+.summary-total-row {
+  font-weight: 700;
+  color: #fff;
+  border-top: 1px solid #333;
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+/* ===== Телефонное поле ===== */
+
+.phone-input-wrap {
+  display: flex;
+  align-items: center;
+  background: #222;
+  border: 1px solid #333;
+  border-radius: 12px;
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+
+.phone-prefix {
+  padding: 14px 12px;
+  color: #888;
+  font-size: 16px;
+  border-right: 1px solid #333;
+}
+
+.phone-field {
+  border: none !important;
+  border-radius: 0 !important;
+  margin-bottom: 0 !important;
+  background: transparent !important;
+  flex: 1;
+}
+
+/* ===== Ошибка формы ===== */
+
+.form-error {
+  color: #e05c5c;
+  font-size: 13px;
+  margin-bottom: 10px;
+  padding: 0 2px;
+}
+
+/* ===== Экран успеха ===== */
+
+.booking-success {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.success-icon {
+  width: 64px;
+  height: 64px;
+  background: #b59e5c;
+  color: #000;
+  font-size: 32px;
+  font-weight: 700;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.booking-success h3 {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.booking-success p {
+  color: #aaa;
+  margin-bottom: 6px;
+  font-size: 15px;
+}
+
