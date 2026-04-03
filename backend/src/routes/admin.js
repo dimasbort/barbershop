@@ -12,6 +12,14 @@ import { verifyAdmin } from "../middleware/auth.js";
 
 const router = express.Router();
 
+// Создание первого администратора (временный маршрут)
+router.post("/register", async (req, res) => {
+  const { username, password } = req.body;
+  const hash = await bcrypt.hash(password, 10);
+  const admin = await Admin.create({ username, password_hash: hash });
+  res.json(admin);
+});
+
 // ── Авторизация ──────────────────────────────
 
 router.post("/login", async (req, res) => {

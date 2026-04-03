@@ -8,64 +8,58 @@ import { Op } from "sequelize";
 
 const router = express.Router();
 
-// Получение ближайших записей (например, для админки)
-router.get("/upcoming", async (req, res) => {
-  try {
-    const now = new Date();
-    const appointments = await Appointment.findAll({
-      where: { datetime_start: { [Op.gte]: now } },
-      include: [Specialist, Service],
-      order: [["datetime_start", "ASC"]],
-    });
-    res.json(appointments);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
 // Создание новой записи
 router.post("/", async (req, res) => {
   try {
     const { specialistId, serviceId, client_name, client_phone, datetime_start } = req.body;
 
-    const service = await Service.findByPk(serviceId);
-    if (!service) return res.status(400).json({ error: "Услуга не найдена" });
+    const specialistService = await SpecialistService.findOne({
+      where: {
+        SpecialistId: specialistId,
+        ServiceId: serviceId,
+      },
+    });
 
-    const datetimeEnd = new Date(new Date(datetime_start).getTime() + service.duration_min * 60000);
+    if (!specialistService) {
+      return res.status(400).json({ error: "Услуга не найдена у данного специалиста" });
+    }
 
-    // Проверяем, не занято ли время
+    const duration = specialistService.duration_min;
+
+    const startDate = new Date(datetime_start);
+    if (isNaN(startDate)) {
+      return res.status(400).json({ error: "Некорректная дата" });
+    }
+
+    const datetimeEnd = new Date(startDate.getTime() + duration * 60000);
+
     const overlap = await Appointment.findOne({
       where: {
         specialistId,
-        [Op.or]: [
-          {
-            datetime_start: { [Op.between]: [datetime_start, datetimeEnd] },
-          },
-          {
-            datetime_end: { [Op.between]: [datetime_start, datetimeEnd] },
-          },
+        [Op.and]: [
+          { datetime_start: { [Op.lt]: datetimeEnd } },
+          { datetime_end: { [Op.gt]: startDate } },
         ],
       },
     });
 
-    if (overlap)
+    if (overlap) {
       return res.status(400).json({ error: "Выбранное время уже занято" });
+    }
 
     const appointment = await Appointment.create({
       specialistId,
       serviceId,
       client_name,
       client_phone,
-      datetime_start,
+      datetime_start: startDate,
       datetime_end: datetimeEnd,
       confirmed: true,
     });
 
-
     res.status(201).json(appointment);
   } catch (err) {
-    console.error(err);
+    console.error("ERROR:", err.message);
     res.status(500).json({ error: "Server error" });
   }
 });

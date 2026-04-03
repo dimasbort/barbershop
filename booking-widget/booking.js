@@ -129,6 +129,7 @@ function chooseSpecialist(id, name, photo, description) {
 async function loadServices(id) {
   const res = await fetch(`${API_URL}/specialists/${id}/services`);
   const services = await res.json();
+  console.log(res, services);
 
   document.getElementById("step-service").innerHTML = `
     <div class="booking-section-title">Выберите услугу</div>
@@ -210,6 +211,7 @@ function renderCalendar() {
   // Дни месяца
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(currentYear, currentMonth, d);
+    date.setHours(3,0,0,0);
     const dateStr = date.toISOString().slice(0, 10);
 
     const isToday = (

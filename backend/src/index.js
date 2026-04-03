@@ -29,6 +29,13 @@ app.use("/api/services", servicesRouter);
 app.use("/api/appointments", appointmentsRouter);
 app.use("/api/admin", adminRouter);
 
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Отдаём папку admin как статику
+app.use("/admin", express.static(path.join(__dirname, "../admin")));
+
 await sequelize.sync({ force: true });
 console.log("DB ready");
 
