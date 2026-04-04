@@ -40,8 +40,7 @@ app.get("/admin/{*path}", (req, res) => {
   res.sendFile(path.join(__dirname, "../admin/index.html"));
 });
 
-
-await sequelize.sync({ force: true });
+await sequelize.sync({ alter: true });
 console.log("DB ready");
 
 initScheduler();
