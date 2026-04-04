@@ -129,7 +129,6 @@ function chooseSpecialist(id, name, photo, description) {
 async function loadServices(id) {
   const res = await fetch(`${API_URL}/specialists/${id}/services`);
   const services = await res.json();
-  console.log(res, services);
 
   document.getElementById("step-service").innerHTML = `
     <div class="booking-section-title">Выберите услугу</div>
@@ -429,9 +428,9 @@ async function submitBooking() {
 }
 
 // Плавающая кнопка
-document.addEventListener("DOMContentLoaded", () => {
-  const floatingBtn = document.getElementById("floating-booking");
-  if (floatingBtn) {
-    floatingBtn.addEventListener("click", openModal);
-  }
-});
+// document.addEventListener("DOMContentLoaded", () => {
+//   const floatingBtn = document.getElementById("floating-booking");
+//   if (floatingBtn) {
+//     floatingBtn.addEventListener("click", openModal);
+//   }
+// });
