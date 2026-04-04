@@ -59,9 +59,19 @@ router.delete("/appointments/:id", verifyAdmin, async (req, res) => {
 // ── Специалисты ──────────────────────────────
 
 router.get("/specialists", verifyAdmin, async (req, res) => {
-  const rows = await Specialist.findAll({ include: Service });
-  res.json(rows);
+  try {
+    const rows = await Specialist.findAll({
+      include: {
+        model: Service,
+        through: { attributes: ["price", "duration_min"] },
+      },
+    });
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
 });
+
 
 router.post("/specialists", verifyAdmin, async (req, res) => {
   const s = await Specialist.create(req.body);

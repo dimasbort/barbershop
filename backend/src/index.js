@@ -36,6 +36,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Отдаём папку admin как статику
 app.use("/admin", express.static(path.join(__dirname, "../admin")));
 
+app.get("/admin/{*path}", (req, res) => {
+  res.sendFile(path.join(__dirname, "../admin/index.html"));
+});
+
+
 await sequelize.sync({ force: true });
 console.log("DB ready");
 
