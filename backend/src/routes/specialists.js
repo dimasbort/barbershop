@@ -48,4 +48,35 @@ router.post("/", async (req, res) => {
   }
 });
 
+// Все специалисты с услугами (публичный, для сайта)
+router.get("/with-services", async (req, res) => {
+  try {
+    const specialists = await Specialist.findAll({
+      include: {
+        model: Service,
+        through: { attributes: ["price", "duration_min"] },
+      },
+    });
+
+    const result = specialists.map(s => ({
+      id: s.id,
+      name: s.name,
+      photo: s.photo,
+      description: s.description,
+      services: s.Services.map(svc => ({
+        id: svc.id,
+        name: svc.name,
+        description: svc.description,
+        price: svc.SpecialistService.price,
+        duration_min: svc.SpecialistService.duration_min,
+      })),
+    }));
+
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 export default router;

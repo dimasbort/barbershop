@@ -351,3 +351,26 @@ body {
   color: #b59e5c;
   margin-left: 8px;
 }
+
+/* Кнопка удаления связи внутри тега услуги */
+.service-tag.active {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tag-delete {
+  background: none;
+  border: none;
+  color: #c0392b;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0 2px;
+  line-height: 1;
+  transition: 0.2s;
+}
+
+.tag-delete:hover {
+  color: #e74c3c;
+}
+

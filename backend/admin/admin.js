@@ -117,13 +117,33 @@ async function loadSpecialistsList() {
   el.innerHTML = allSpecialists.map(s => {
     const tags = allServices.map(svc => {
       const linked = s.Services?.find(x => x.id === svc.id);
-      const cls = linked ? "service-tag active" : "service-tag";
-      const detail = linked
-        ? `${linked.SpecialistService?.price} BYN · ${linked.SpecialistService?.duration_min} мин`
-        : "";
-      return `<span class="${cls}" onclick="openSSModal(${s.id},'${s.name}',${svc.id},'${svc.name}',${linked?.SpecialistService?.price||0},${linked?.SpecialistService?.duration_min||0})">
-        ${svc.name}${detail ? " · " + detail : ""}
-      </span>`;
+
+      if (linked) {
+        // Услуга привязана — показываем тег с ценой и кнопкой удаления
+        const price = linked.SpecialistService?.price || "";
+        const dur   = linked.SpecialistService?.duration_min || "";
+        return `
+          <span class="service-tag active">
+            <span onclick="openSSModal(
+              ${s.id},'${s.name}',
+              ${svc.id},'${svc.name}',
+              ${price},${dur}
+            )">${svc.name} · ${price} BYN · ${dur} мин</span>
+            <button
+              class="tag-delete"
+              title="Удалить связь"
+              onclick="unlinkService(${s.id}, ${svc.id})"
+            >✕</button>
+          </span>`;
+      } else {
+        // Услуга не привязана — серый тег для добавления
+        return `
+          <span class="service-tag" onclick="openSSModal(
+            ${s.id},'${s.name}',
+            ${svc.id},'${svc.name}',
+            '',''
+          )">+ ${svc.name}</span>`;
+      }
     }).join("");
 
     return `
@@ -341,3 +361,14 @@ async function api(method, path, body, useToken = true) {
   }
   return res.json();
 }
+
+async function unlinkService(specialistId, serviceId) {
+  if (!confirm("Удалить связь специалиста с этой услугой?")) return;
+  await api("DELETE", "/admin/specialist-service", {
+    specialistId,
+    serviceId,
+  });
+  allSpecialists = await api("GET", "/admin/specialists");
+  loadSpecialistsList();
+}
+
