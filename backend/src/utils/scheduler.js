@@ -7,7 +7,7 @@ import Service from "../models/Service.js";
 
 export function initScheduler() {
 
-  // ── SMS-напоминания (каждые 30 мин в 00 и 30) ──────────────────
+  // ── SMS-напоминания за час до визита (каждые 30 мин в 00 и 30) ──
   cron.schedule("0,30 * * * *", async () => {
     try {
       const now = new Date();
@@ -23,21 +23,22 @@ export function initScheduler() {
       });
 
       for (const a of appointments) {
-        const time = new Date(a.datetime_start).toLocaleTimeString("ru-RU", {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-        const msg = `Напоминаем: ${a.Service?.name || "услуга"} у ${a.Specialist?.name || "специалиста"} в ${time}. До встречи — Барбершоп Андрей Палыч!`;
+        const specialistName = a.Specialist?.name || "специалиста";
+        const message = `До визита к специалисту ${specialistName} остался 1 час`;
 
-        await sendSMS(a.client_phone, msg);
+        await sendSMS(a.client_phone, message, `reminder_${a.id}`);
 
         a.notified = true;
         await a.save();
 
-        console.log(`📲 SMS → ${a.client_phone}`);
+        console.log(`📲 Напоминание → ${a.client_phone} (${specialistName})`);
+      }
+
+      if (appointments.length > 0) {
+        console.log(`📅 Обработано ${appointments.length} напоминаний`);
       }
     } catch (err) {
-      console.error("SMS scheduler error:", err.message);
+      console.error("SMS reminder error:", err.message);
     }
   });
 
@@ -54,11 +55,40 @@ export function initScheduler() {
         },
       });
 
-      console.log(`🗑️  Автоочистка: удалено ${deleted} старых записей`);
+      console.log(`🗑️ Автоочистка: удалено ${deleted} старых записей`);
     } catch (err) {
-      console.error("Cleanup scheduler error:", err.message);
+      console.error("Cleanup error:", err.message);
     }
   });
 
-  console.log("📅 Планировщик запущен (SMS: каждые 30 мин | Очистка: 03:00)");
+  console.log("📅 Планировщик запущен (МТС-Коммуникатор)");
+  console.log("   • Напоминания: каждые 30 мин в 00/30");
+  console.log("   • Очистка: ежедневно в 03:00");
+}
+
+/**
+ * Уведомление при создании новой записи
+ * Вызывается из API при создании записи
+ */
+export async function sendBookingConfirmation(appointment, specialist, service) {
+  try {
+    const date = new Date(appointment.datetime_start);
+    const dateStr = date.toLocaleDateString("ru-RU", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+    const timeStr = date.toLocaleTimeString("ru-RU", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    const message = `Вы записаны на ${service.name} на ${dateStr} в ${timeStr}`;
+
+    await sendSMS(appointment.client_phone, message, `confirm_${appointment.id}`);
+
+    console.log(`📲 Подтверждение записи → ${appointment.client_phone}`);
+  } catch (err) {
+    console.error("Booking confirmation error:", err.message);
+  }
 }
