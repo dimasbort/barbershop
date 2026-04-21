@@ -24,9 +24,9 @@ const AvailableDate = sequelize.define("AvailableDate", {
 });
 
 Specialist.hasMany(AvailableDate, {
-  foreignKey: "SpecialistId",
+  foreignKey: "specialistId",
   onDelete: "CASCADE",
 });
-AvailableDate.belongsTo(Specialist, { foreignKey: "SpecialistId" });
+AvailableDate.belongsTo(Specialist, { foreignKey: "specialistId" });
 
 export default AvailableDate;

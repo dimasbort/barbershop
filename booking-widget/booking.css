@@ -523,3 +523,154 @@
   font-size: 15px;
 }
 
+/* Чекбокс для согласия */
+.gdpr-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 15px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.gdpr-checkbox input[type="checkbox"] {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #333;
+  border-radius: 4px;
+  background: #222;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.gdpr-checkbox input[type="checkbox"]:checked {
+  background: #b59e5c;
+  border-color: #b59e5c;
+}
+
+.gdpr-checkbox input[type="checkbox"]:checked::after {
+  content: "✓";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  color: #000;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.gdpr-text {
+  color: #ccc;
+}
+
+.gdpr-text a {
+  color: #b59e5c;
+  text-decoration: none;
+}
+
+.gdpr-text a:hover {
+  text-decoration: underline;
+}
+
+/* Информационная заметка */
+.info-note {
+  background: #2a2a2a;
+  border-left: 3px solid #b59e5c;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #bbb;
+  margin-bottom: 15px;
+  line-height: 1.4;
+}
+
+/* Информация о кабинете */
+.cabinet-info {
+  background: #2a2a2a;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 20px 0;
+  text-align: left;
+}
+
+.cabinet-info h4 {
+  color: #b59e5c;
+  margin-bottom: 10px;
+  font-size: 16px;
+}
+
+.cabinet-info p {
+  font-size: 14px;
+  color: #ccc;
+  margin-bottom: 12px;
+}
+
+.cabinet-credentials {
+  background: #1a1a1a;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 14px;
+  margin-bottom: 15px;
+}
+
+.cabinet-credentials div {
+  margin-bottom: 4px;
+}
+
+/* Карточки информации о клиенте */
+.client-info-card {
+  background: #2a2a2a;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.client-welcome, .new-client-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.welcome-icon, .info-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.welcome-title, .info-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #b59e5c;
+  margin-bottom: 2px;
+}
+
+.welcome-phone, .info-subtitle {
+  font-size: 13px;
+  color: #888;
+}
+
+/* Действия формы */
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.form-actions .booking-btn {
+  flex: 1;
+  margin-top: 0;
+}
+
+.booking-btn.secondary {
+  background: #333;
+  color: #fff;
+}
+
+.booking-btn.secondary:hover {
+  background: #444;
+}
+
+

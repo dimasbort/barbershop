@@ -22,23 +22,31 @@ export function initScheduler() {
         include: [Specialist, Service],
       });
 
+      if (appointments.length === 0) {
+        return; // Нет записей для уведомления
+      }
+
+      console.log(`📅 Найдено ${appointments.length} записей для напоминания`);
+
       for (const a of appointments) {
         const specialistName = a.Specialist?.name || "специалиста";
-        const message = `До визита к специалисту ${specialistName} остался 1 час`;
+        const message = `До визита к специалисту ${specialistName} остался 1 час. Барбершоп "Андрей Палыч"`;
 
-        await sendSMS(a.client_phone, message, `reminder_${a.id}`);
+        const result = await sendSMS(a.client_phone, message, `reminder_${a.id}`);
+        
+        if (result?.success !== false) {
+          a.notified = true;
+          await a.save();
+          console.log(`📲 Напоминание отправлено → ${a.client_phone} (${specialistName})`);
+        } else {
+          console.error(`❌ Не удалось отправить напоминание на ${a.client_phone}:`, result?.error);
+        }
 
-        a.notified = true;
-        await a.save();
-
-        console.log(`📲 Напоминание → ${a.client_phone} (${specialistName})`);
-      }
-
-      if (appointments.length > 0) {
-        console.log(`📅 Обработано ${appointments.length} напоминаний`);
+        // Добавляем задержку 1 секунда между SMS (rate limiting)
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     } catch (err) {
-      console.error("SMS reminder error:", err.message);
+      console.error("SMS reminder scheduler error:", err.message);
     }
   });
 
@@ -55,27 +63,28 @@ export function initScheduler() {
         },
       });
 
-      console.log(`🗑️ Автоочистка: удалено ${deleted} старых записей`);
+      if (deleted > 0) {
+        console.log(`🗑️ Автоочистка: удалено ${deleted} старых записей`);
+      }
     } catch (err) {
-      console.error("Cleanup error:", err.message);
+      console.error("Cleanup scheduler error:", err.message);
     }
   });
 
-  console.log("📅 Планировщик запущен (МТС-Коммуникатор)");
+  console.log("📅 Планировщик запущен (SMS Rocket)");
   console.log("   • Напоминания: каждые 30 мин в 00/30");
   console.log("   • Очистка: ежедневно в 03:00");
 }
 
 /**
  * Уведомление при создании новой записи
- * Вызывается из API при создании записи
  */
 export async function sendBookingConfirmation(appointment, specialist, service) {
   try {
     const date = new Date(appointment.datetime_start);
     const dateStr = date.toLocaleDateString("ru-RU", {
       day: "numeric",
-      month: "long",
+      month: "long", 
       year: "numeric",
     });
     const timeStr = date.toLocaleTimeString("ru-RU", {
@@ -83,11 +92,15 @@ export async function sendBookingConfirmation(appointment, specialist, service) 
       minute: "2-digit",
     });
 
-    const message = `Вы записаны на ${service.name} на ${dateStr} в ${timeStr}`;
+    const message = `Вы записаны на "${service.name}" на ${dateStr} в ${timeStr}. Барбершоп "Андрей Палыч", ул. 28 июля 37а`;
 
-    await sendSMS(appointment.client_phone, message, `confirm_${appointment.id}`);
+    const result = await sendSMS(appointment.client_phone, message, `confirm_${appointment.id}`);
 
-    console.log(`📲 Подтверждение записи → ${appointment.client_phone}`);
+    if (result?.success !== false) {
+      console.log(`📲 Подтверждение записи отправлено → ${appointment.client_phone}`);
+    } else {
+      console.error(`❌ Не удалось отправить подтверждение на ${appointment.client_phone}:`, result?.error);
+    }
   } catch (err) {
     console.error("Booking confirmation error:", err.message);
   }

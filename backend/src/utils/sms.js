@@ -1,110 +1,52 @@
-import axios from "axios";
+import RocketSMS from "node-rocketsms-api";
 
-const MTS_API_URL = process.env.MTS_API_URL;
-const CLIENT_ID = process.env.MTS_CLIENT_ID;
-const USERNAME = process.env.MTS_USERNAME;
-const PASSWORD = process.env.MTS_PASSWORD;
-
-// Базовая аутентификация (Basic Auth)
-const auth = {
-  username: USERNAME,
-  password: PASSWORD,
-};
+// Инициализация клиента SMS Rocket
+const smsClient = new RocketSMS(
+  process.env.SMS_ROCKET_USERNAME,
+  process.env.SMS_ROCKET_PASSWORD
+);
 
 /**
- * Отправка SMS через МТС-Коммуникатор
- * @param {string} phone - номер телефона (375291234567)
+ * Отправка SMS через SMS Rocket
+ * @param {string} phone - номер телефона (375291234567 или +375291234567)
  * @param {string} message - текст сообщения
  * @param {string} extraId - внешний идентификатор (необязательно)
  */
 export async function sendSMS(phone, message, extraId = null) {
   try {
-    // Убираем "+" если есть
-    const normalizedPhone = phone.replace("+", "").trim();
+    // Нормализуем номер: оставляем только цифры
+    const normalizedPhone = phone.replace(/\D/g, "");
     
-    // Генерируем уникальный extraId если не передан
-    const messageExtraId = extraId || `booking_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // SMS Rocket ожидает номер в формате +375XXXXXXXX
+    const formattedPhone = normalizedPhone.startsWith("375") 
+      ? `+${normalizedPhone}` 
+      : phone;
 
-    const payload = {
-      phone_number: parseInt(normalizedPhone),
-      extra_id: messageExtraId,
-      channels: ["sms"],
-      channel_options: {
-        sms: {
-          text: message,
-          alpha_name: "AndreiPalych", // имя отправителя (до 11 символов)
-          ttl: 3600, // время жизни сообщения в секундах (1 час)
-        },
-      },
-    };
+    const result = await smsClient.sendSMS(formattedPhone, message);
 
-    const response = await axios.post(
-      `${MTS_API_URL}/${CLIENT_ID}/json2/simple`,
-      payload,
-      {
-        auth,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    if (response.status === 200) {
-      console.log(`📲 SMS отправлено на ${phone}, message_id: ${response.data.message_id}`);
-      return response.data;
+    if (result && result.success) {
+      console.log(`📲 SMS отправлено на ${formattedPhone}, ID: ${result.id || 'N/A'}`);
+      return result;
     } else {
-      console.error("MTS API error:", response.status, response.data);
+      console.error("SMS Rocket error:", result?.error || "Unknown error");
+      return { success: false, error: result?.error || "Failed to send SMS" };
     }
   } catch (err) {
-    console.error("Ошибка отправки SMS через МТС:", err?.response?.data || err.message);
+    console.error("Ошибка отправки SMS через SMS Rocket:", err.message);
+    return { success: false, error: err.message };
   }
 }
 
 /**
- * Отправка комбо SMS + Viber (опционально)
- * @param {string} phone - номер телефона
- * @param {string} message - текст сообщения
- * @param {object} options - дополнительные параметры
+ * Проверка баланса SMS Rocket (полезно для мониторинга)
  */
-export async function sendComboMessage(phone, message, options = {}) {
+export async function checkSMSBalance() {
   try {
-    const normalizedPhone = phone.replace("+", "").trim();
-    const messageExtraId = options.extraId || `booking_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-    const payload = {
-      phone_number: parseInt(normalizedPhone),
-      extra_id: messageExtraId,
-      channels: ["viber", "sms"], // сначала Viber, потом SMS как фолбэк
-      channel_options: {
-        viber: {
-          text: message,
-          ttl: 300, // 5 минут для Viber
-          alpha_name: "AndreiPalych",
-        },
-        sms: {
-          text: message,
-          alpha_name: "AndreiPalych",
-          ttl: 3600,
-        },
-      },
-    };
-
-    const response = await axios.post(
-      `${MTS_API_URL}/${CLIENT_ID}/json2/simple`,
-      payload,
-      {
-        auth,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    if (response.status === 200) {
-      console.log(`📲 Комбо-сообщение отправлено на ${phone}, message_id: ${response.data.message_id}`);
-      return response.data;
-    }
+    const balance = await smsClient.getBalance();
+    console.log(`💰 SMS Rocket баланс: ${balance}`);
+    return balance;
   } catch (err) {
-    console.error("Ошибка отправки комбо-сообщения:", err?.response?.data || err.message);
+    console.error("Ошибка получения баланса:", err.message);
+    return null;
   }
 }

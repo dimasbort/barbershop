@@ -16,11 +16,11 @@ const SpecialistService = sequelize.define("SpecialistService", {
 
 Specialist.belongsToMany(Service, {
   through: SpecialistService,
-  foreignKey: "SpecialistId",
+  foreignKey: "specialistId",
 });
 Service.belongsToMany(Specialist, {
   through: SpecialistService,
-  foreignKey: "ServiceId",
+  foreignKey: "serviceId",
 });
 
 export default SpecialistService;

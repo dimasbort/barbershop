@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Личный кабинет — Барбершоп Андрей Палыч</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body {
+      background: #111;
+      font-family: "Montserrat", sans-serif;
+      color: #fff;
+      margin: 0;
+      min-height: 100vh;
+    }
+    .cabinet-container {
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #1a1a1a;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    .cabinet-header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #333;
+    }
+    .cabinet-header h1 {
+      font-size: 28px;
+      color: #b59e5c;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+    .cabinet-header p {
+      color: #888;
+      margin: 0;
+    }
+    .screen {
+      display: none;
+    }
+    .screen.active {
+      display: block;
+    }
+    .login-form {
+      max-width: 400px;
+      margin: 0 auto;
+    }
+    .booking-input {
+      width: 100%;
+      background: #222;
+      border: 1px solid #333;
+      border-radius: 12px;
+      color: #fff;
+      padding: 14px;
+      font-size: 16px;
+      margin-bottom: 14px;
+      box-sizing: border-box;
+    }
+    .booking-input:focus {
+      border-color: #b59e5c;
+      outline: none;
+    }
+    .booking-btn {
+      width: 100%;
+      padding: 14px;
+      background: #b59e5c;
+      color: #000;
+      border: none;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 16px;
+      cursor: pointer;
+      transition: 0.25s;
+    }
+    .booking-btn:hover {
+      background: #f3c46d;
+    }
+    .booking-btn.small {
+      width: auto;
+      padding: 8px 16px;
+      font-size: 14px;
+    }
+    .form-error {
+      color: #e05c5c;
+      font-size: 13px;
+      margin-bottom: 10px;
+      padding: 0 2px;
+    }
+    .appointment-item {
+      background: #222;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+    }
+    .appointment-info {
+      flex: 1;
+    }
+    .appointment-info h3 {
+      color: #b59e5c;
+      margin-bottom: 8px;
+      font-size: 18px;
+    }
+    .appointment-info p {
+      margin-bottom: 4px;
+      font-size: 14px;
+      color: #ccc;
+    }
+    .btn-cancel {
+      background: #c0392b;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.2s;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    .btn-cancel:hover {
+      background: #e74c3c;
+    }
+    .btn-cancel:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+    .cabinet-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+    }
+    .cabinet-top h2 {
+      margin: 0;
+      font-size: 22px;
+    }
+    .no-appointments {
+      text-align: center;
+      color: #888;
+      padding: 60px 20px;
+      font-size: 16px;
+    }
+    .no-appointments-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      display: block;
+    }
+    .back-to-site {
+      text-align: center;
+      margin-top: 30px;
+    }
+    .back-to-site a {
+      color: #b59e5c;
+      text-decoration: none;
+      font-size: 14px;
+    }
+    .back-to-site a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="cabinet-container">
+    <div class="cabinet-header">
+      <h1>Личный кабинет</h1>
+      <p>Барбершоп «Андрей Палыч»</p>
+    </div>
+
+    <!-- Форма входа -->
+    <div id="login-form" class="screen active">
+      <div class="login-form">
+        <input id="login-phone" class="booking-input" placeholder="Номер телефона (+375...)">
+        <input id="login-password" class="booking-input" type="password" placeholder="Пароль">
+        <div id="login-error" class="form-error" style="display: none;"></div>
+        <button class="booking-btn" onclick="clientLogin()">Войти</button>
+        
+        <div class="back-to-site">
+          <a href="/">← Вернуться на сайт</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Контент кабинета -->
+    <div id="cabinet-content" class="screen">
+      <div class="cabinet-top">
+        <h2>Мои записи</h2>
+        <div style="display: flex; gap: 10px;">
+          <button class="booking-btn small" onclick="openBookingWidget()">+ Новая запись</button>
+          <button class="booking-btn small" onclick="clientLogout()">Выйти</button>
+        </div>
+      </div>
+      
+      <div id="appointments-list"></div>
+      
+      <div id="no-appointments" class="no-appointments" style="display: none;">
+        <span class="no-appointments-icon">📅</span>
+        <div>У вас нет предстоящих записей</div>
+        <button class="booking-btn" onclick="openBookingWidget()" style="margin-top: 20px; max-width: 200px;">
+          Записаться на услугу
+        </button>
+      </div>
+      
+      <div class="back-to-site">
+        <a href="/">← Вернуться на сайт</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Подключаем скрипт -->
+  <script src="client-cabinet.js"></script>
+</body>
+</html>

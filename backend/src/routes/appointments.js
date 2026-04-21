@@ -1,4 +1,6 @@
 import express from "express";
+import bcrypt from "bcrypt";
+import Client from "../models/Client.js";
 import Appointment from "../models/Appointment.js";
 import Specialist from "../models/Specialist.js";
 import Service from "../models/Service.js";
@@ -9,10 +11,31 @@ import { Op } from "sequelize";
 
 const router = express.Router();
 
-// Создание новой записи
+// Создание новой записи (с автоматической регистрацией клиента)
 router.post("/", async (req, res) => {
   try {
-    const { specialistId, serviceId, client_name, client_phone, datetime_start } = req.body;
+    const { 
+      specialistId, 
+      serviceId, 
+      client_name, 
+      client_phone, 
+      client_password,
+      datetime_start,
+      gdpr_consent 
+    } = req.body;
+
+    // Проверка согласия на обработку данных
+    if (!gdpr_consent) {
+      return res.status(400).json({ 
+        error: "Необходимо согласие на обработку персональных данных" 
+      });
+    }
+
+    if (!client_password) {
+      return res.status(400).json({ 
+        error: "Необходимо задать пароль для входа в личный кабинет" 
+      });
+    }
 
     const service = await Service.findByPk(serviceId);
     if (!service) return res.status(400).json({ error: "Услуга не найдена" });
@@ -20,29 +43,47 @@ router.post("/", async (req, res) => {
     const specialist = await Specialist.findByPk(specialistId);
     if (!specialist) return res.status(400).json({ error: "Специалист не найден" });
 
-    const datetimeEnd = new Date(new Date(datetime_start).getTime() + service.duration_min * 60000);
+    // Находим длительность услуги для специалиста
+    const ss = await SpecialistService.findOne({
+      where: { specialistId: specialistId, serviceId: serviceId },
+    });
+    if (!ss) return res.status(400).json({ error: "Специалист не оказывает данную услугу" });
 
-    // Проверяем, не занято ли время
+    const datetimeEnd = new Date(new Date(datetime_start).getTime() + ss.duration_min * 60000);
+
+    // Проверяем занятость времени
     const overlap = await Appointment.findOne({
       where: {
-        SpecialistId: specialistId,
+        specialistId: specialistId,
         [Op.or]: [
-          {
-            datetime_start: { [Op.between]: [datetime_start, datetimeEnd] },
-          },
-          {
-            datetime_end: { [Op.between]: [datetime_start, datetimeEnd] },
-          },
+          { datetime_start: { [Op.between]: [datetime_start, datetimeEnd] } },
+          { datetime_end: { [Op.between]: [datetime_start, datetimeEnd] } },
         ],
       },
     });
 
-    if (overlap)
+    if (overlap) {
       return res.status(400).json({ error: "Выбранное время уже занято" });
+    }
 
+    // Регистрируем/находим клиента
+    let client = await Client.findOne({ where: { phone: client_phone } });
+    
+    if (!client) {
+      const password_hash = await bcrypt.hash(client_password, 10);
+      client = await Client.create({
+        phone: client_phone,
+        name: client_name,
+        password_hash,
+        gdpr_consent: true,
+      });
+    }
+
+    // Создаём запись
     const appointment = await Appointment.create({
-      SpecialistId: specialistId,
-      ServiceId: serviceId,
+      specialistId: specialistId,
+      serviceId: serviceId,
+      clientId: client.id,
       client_name,
       client_phone,
       datetime_start,
@@ -50,8 +91,8 @@ router.post("/", async (req, res) => {
       confirmed: true,
     });
 
-    // 🆕 Отправляем SMS-подтверждение сразу после создания
-    await sendBookingConfirmation(appointment, specialist, service);
+    // Отправляем SMS-подтверждение
+    await sendBookingConfirmation(appointment, specialist, { name: service.name });
 
     res.status(201).json(appointment);
   } catch (err) {
@@ -59,7 +100,6 @@ router.post("/", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
-
 
 router.get("/:specialistId/available", async (req, res) => {
   try {
@@ -73,15 +113,15 @@ router.get("/:specialistId/available", async (req, res) => {
       // Ищем длительность из промежуточной таблицы
       const ss = await SpecialistService.findOne({
         where: {
-          SpecialistId: specialist.id,
-          ServiceId: serviceId,
+          specialistId: specialist.id,
+          serviceId: serviceId,
         },
       });
       if (ss) duration = ss.duration_min;
     }
 
     const appointments = await Appointment.findAll({
-      where: { SpecialistId: specialist.id },
+      where: { specialistId: specialist.id },
     });
 
     // Получаем дни, открытые для записи
@@ -90,7 +130,7 @@ router.get("/:specialistId/available", async (req, res) => {
 
     const availableDates = await AvailableDate.findAll({
       where: {
-        SpecialistId: specialist.id,
+        specialistId: specialist.id,
         isAvailable: true,
         date: { [Op.gte]: today },
       },

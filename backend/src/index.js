@@ -12,11 +12,13 @@ import "./models/Service.js";
 import "./models/Appointment.js";
 import "./models/AvailableDate.js";
 import "./models/SpecialistService.js";
+import "./models/Client.js";
 
 import specialistsRouter from "./routes/specialists.js";
 import servicesRouter from "./routes/services.js";
 import appointmentsRouter from "./routes/appointments.js";
 import adminRouter from "./routes/admin.js";
+import clientRouter from "./routes/client.js";
 
 import { initScheduler } from "./utils/scheduler.js";
 
@@ -28,6 +30,7 @@ app.use("/api/specialists", specialistsRouter);
 app.use("/api/services", servicesRouter);
 app.use("/api/appointments", appointmentsRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/client", clientRouter);
 
 import path from "path";
 import { fileURLToPath } from "url";

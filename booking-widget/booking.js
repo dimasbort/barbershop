@@ -322,12 +322,24 @@ function chooseSlot(datetime, el) {
 // ─────────────────────────────────────────
 // ШАГ 4 — ДАННЫЕ КЛИЕНТА
 // ─────────────────────────────────────────
+// Глобальная переменная для отслеживания состояния формы
+let clientFormMode = "check-phone"; // "check-phone" | "new-client" | "existing-client"
+let existingClient = null;
+let clientPhone = null;
+
+// Шаг 4 — Данные клиента (переработанный)
 function showClientForm() {
+  clientFormMode = "check-phone";
+  existingClient = null;
+  renderClientForm();
+}
+
+function renderClientForm() {
   const dt = new Date(bookingData.datetime_start);
   const dateStr = dt.toLocaleDateString("ru-RU", {weekday:"long", day:"numeric", month:"long"});
   const timeStr = dt.toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"});
 
-  document.getElementById("step-client").innerHTML = `
+  let formHTML = `
     <div class="booking-section-title">Детали записи</div>
 
     <div class="booking-summary">
@@ -337,14 +349,14 @@ function showClientForm() {
              class="summary-avatar">
         <div>
           <div class="summary-name">${bookingData.specialistName}</div>
-          <div class="summary-sub">${bookingData.specialistDescription}</div>
+          <div class="summary-sub">Барбер</div>
         </div>
       </div>
       <div class="summary-row">
         <div class="summary-icon">📅</div>
         <div>
           <div class="summary-name">${dateStr}</div>
-          <div class="summary-sub">${timeStr} &mdash; ${getEndTime(dt, bookingData.serviceDuration)}</div>
+          <div class="summary-sub">${timeStr} — ${getEndTime(dt, bookingData.serviceDuration)}</div>
         </div>
       </div>
       <div class="summary-divider"></div>
@@ -359,36 +371,91 @@ function showClientForm() {
     </div>
 
     <div class="booking-section-title" style="margin-top:20px">Ваши данные</div>
-    <div style="padding:0 20px 20px">
-      <input id="client-name"  class="booking-input" placeholder="Имя *">
+    <div style="padding:0 20px 20px">`;
+
+  if (clientFormMode === "check-phone") {
+    // Шаг 1: Проверка номера телефона
+    formHTML += `
       <div class="phone-input-wrap">
         <span class="phone-prefix">+375</span>
-        <input id="client-phone" class="booking-input phone-field" placeholder="Номер телефона *" maxlength="9">
+        <input id="client-phone" class="booking-input phone-field" placeholder="Номер телефона *" maxlength="9" required>
       </div>
+      
+      <div class="info-note">
+        👋 Введите ваш номер телефона. Мы проверим, есть ли у вас уже личный кабинет.
+      </div>
+      
       <div id="form-error" class="form-error" style="display:none"></div>
-      <div class="booking-btn" onclick="submitBooking()">Записаться</div>
-    </div>
-  `;
+      <div class="booking-btn" onclick="checkClientPhone()">Продолжить</div>`;
+
+  } else if (clientFormMode === "existing-client") {
+    // Шаг 2a: Существующий клиент - только пароль
+    formHTML += `
+      <div class="client-info-card">
+        <div class="client-welcome">
+          <span class="welcome-icon">👋</span>
+          <div>
+            <div class="welcome-title">Добро пожаловать, ${existingClient.name}!</div>
+            <div class="welcome-phone">+375${clientPhone}</div>
+          </div>
+        </div>
+      </div>
+      
+      <input id="client-password" class="booking-input" type="password" placeholder="Введите ваш пароль *" required>
+      
+      <div class="form-actions">
+        <button class="booking-btn secondary" onclick="goBackToPhoneCheck()">Назад</button>
+        <button class="booking-btn" onclick="submitBookingExisting()">Записаться</button>
+      </div>
+      
+      <div id="form-error" class="form-error" style="display:none"></div>`;
+
+  } else if (clientFormMode === "new-client") {
+    // Шаг 2b: Новый клиент - полная регистрация
+    formHTML += `
+      <div class="client-info-card">
+        <div class="new-client-info">
+          <span class="info-icon">✨</span>
+          <div>
+            <div class="info-title">Создание личного кабинета</div>
+            <div class="info-subtitle">Номер +375${clientPhone} не найден</div>
+          </div>
+        </div>
+      </div>
+      
+      <input id="client-name" class="booking-input" placeholder="Ваше имя *" required>
+      <input id="client-password" class="booking-input" type="password" placeholder="Придумайте пароль (мин. 4 символа) *" required>
+      
+      <label class="gdpr-checkbox">
+        <input type="checkbox" id="gdpr-consent" required>
+        <span class="checkmark"></span>
+        <span class="gdpr-text">
+          Согласен на <a href="/privacy-policy.html" target="_blank">обработку персональных данных</a> 
+          и получение SMS-уведомлений
+        </span>
+      </label>
+
+      <div class="info-note">
+        💡 Пароль нужен для входа в личный кабинет, где вы сможете просматривать и отменять записи
+      </div>
+
+      <div class="form-actions">
+        <button class="booking-btn secondary" onclick="goBackToPhoneCheck()">Назад</button>
+        <button class="booking-btn" onclick="submitBookingNew()">Создать кабинет и записаться</button>
+      </div>
+      
+      <div id="form-error" class="form-error" style="display:none"></div>`;
+  }
+
+  formHTML += `</div>`;
+  document.getElementById("step-client").innerHTML = formHTML;
 }
 
-function getEndTime(start, duration) {
-  const end = new Date(start.getTime() + duration * 60000);
-  return end.toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"});
-}
-
-// ─────────────────────────────────────────
-// ШАГ 5 — ОТПРАВКА
-// ─────────────────────────────────────────
-async function submitBooking() {
-  const name = document.getElementById("client-name").value.trim();
+// Проверка номера телефона
+async function checkClientPhone() {
   const phone = document.getElementById("client-phone").value.trim();
   const errEl = document.getElementById("form-error");
 
-  if (!name) {
-    errEl.textContent = "Пожалуйста, введите имя.";
-    errEl.style.display = "block";
-    return;
-  }
   if (phone.length < 7) {
     errEl.textContent = "Введите корректный номер телефона.";
     errEl.style.display = "block";
@@ -396,36 +463,243 @@ async function submitBooking() {
   }
 
   errEl.style.display = "none";
-  bookingData.client_name = name;
-  bookingData.client_phone = "+375" + phone;
 
-  const res = await fetch(`${API_URL}/appointments`, {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify(bookingData),
-  });
+  try {
+    const res = await fetch(`${API_URL}/client/check-phone`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ phone: "+375" + phone }),
+    });
 
-  const data = await res.json();
-  if (data.error) {
-    errEl.textContent = data.error;
+    const data = await res.json();
+    
+    if (data.error) {
+      errEl.textContent = data.error;
+      errEl.style.display = "block";
+      return;
+    }
+
+    if (data.exists) {
+      // Клиент существует
+      clientFormMode = "existing-client";
+      existingClient = data.client;
+    } else {
+      // Новый клиент
+      clientFormMode = "new-client";
+      existingClient = null;
+    }
+    clientPhone = phone;
+
+    renderClientForm();
+  } catch (err) {
+    errEl.textContent = "Ошибка сети. Попробуйте еще раз.";
+    errEl.style.display = "block";
+  }
+}
+
+// Возврат к проверке телефона
+function goBackToPhoneCheck() {
+  clientFormMode = "check-phone";
+  existingClient = null;
+  renderClientForm();
+}
+
+// Запись для существующего клиента
+async function submitBookingExisting() {
+  const phone = "+375" + clientPhone;
+  const password = document.getElementById("client-password").value.trim();
+  const errEl = document.getElementById("form-error");
+
+  if (!password) {
+    errEl.textContent = "Введите пароль.";
     errEl.style.display = "block";
     return;
   }
 
-  goToStep("success");
+  // Сначала авторизуемся
+  try {
+    const authRes = await fetch(`${API_URL}/client/auth`, {
+      method: "POST", 
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        phone,
+        password,
+        mode: "login"
+      }),
+    });
+
+    const authData = await authRes.json();
+    
+    if (authData.error) {
+      errEl.textContent = authData.error;
+      errEl.style.display = "block";
+      return;
+    }
+
+    // Теперь создаём запись
+    const appointmentData = {
+      specialistId: bookingData.specialistId,
+      serviceId: bookingData.serviceId,
+      client_name: existingClient.name,
+      client_phone: phone,
+      client_password: password,
+      datetime_start: bookingData.datetime_start,
+      gdpr_consent: true, // уже был дан при регистрации
+    };
+
+    const bookingRes = await fetch(`${API_URL}/appointments`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(appointmentData),
+    });
+
+    const bookingData_result = await bookingRes.json();
+    
+    if (bookingData_result.error) {
+      errEl.textContent = bookingData_result.error;
+      errEl.style.display = "block";
+      return;
+    }
+
+    // Успех
+    goToStep("success");
+    showSuccessStep(existingClient.name, phone.replace("+375", ""), "***", true);
+
+  } catch (err) {
+    errEl.textContent = "Ошибка сети. Попробуйте еще раз.";
+    errEl.style.display = "block";
+  }
+}
+
+// Запись для нового клиента
+async function submitBookingNew() {
+  const phone = "+375" + clientPhone;
+  const name = document.getElementById("client-name").value.trim();
+  const password = document.getElementById("client-password").value.trim();
+  const gdprConsent = document.getElementById("gdpr-consent").checked;
+  const errEl = document.getElementById("form-error");
+  console.log(phone);
+
+  if (!name) {
+    errEl.textContent = "Введите ваше имя.";
+    errEl.style.display = "block";
+    return;
+  }
+  if (!password || password.length < 4) {
+    errEl.textContent = "Пароль должен содержать минимум 4 символа.";
+    errEl.style.display = "block";
+    return;
+  }
+  if (!gdprConsent) {
+    errEl.textContent = "Необходимо согласие на обработку персональных данных.";
+    errEl.style.display = "block";
+    return;
+  }
+
+  try {
+    // Создаём запись (клиент будет создан автоматически)
+    const appointmentData = {
+      specialistId: bookingData.specialistId,
+      serviceId: bookingData.serviceId,
+      client_name: name,
+      client_phone: phone,
+      client_password: password,
+      datetime_start: bookingData.datetime_start,
+      gdpr_consent: true,
+    };
+
+    const res = await fetch(`${API_URL}/appointments`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(appointmentData),
+    });
+
+    const data = await res.json();
+    
+    if (data.error) {
+      errEl.textContent = data.error;
+      errEl.style.display = "block";
+      return;
+    }
+
+    // Успех
+    goToStep("success");
+    showSuccessStep(name, phone.replace("+375", ""), password, false);
+
+  } catch (err) {
+    errEl.textContent = "Ошибка сети. Попробуйте еще раз.";
+    errEl.style.display = "block";
+  }
+}
+
+// Показ экрана успеха
+function showSuccessStep(name, phone, password, isExisting) {
   const dt = new Date(bookingData.datetime_start);
+  
   document.getElementById("step-success").innerHTML = `
     <div class="booking-success">
       <div class="success-icon">✓</div>
-      <h3>Вы записаны!</h3>
-      <p>${bookingData.specialistName}</p>
+      <h3>Вы успешно записаны!</h3>
+      <p><strong>${bookingData.specialistName}</strong></p>
       <p>${bookingData.serviceName}</p>
       <p>${dt.toLocaleDateString("ru-RU", {weekday:"long", day:"numeric", month:"long"})},
          ${dt.toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"})}</p>
-    <div class="booking-btn" style="margin-top:20px" onclick="closeModal()">Закрыть</div>  
+      
+      <div class="cabinet-info">
+        <h4>📱 Личный кабинет</h4>
+        <p>${isExisting ? 'Войдите в личный кабинет для управления записями:' : 'Ваш личный кабинет создан! Данные для входа:'}</p>
+        <div class="cabinet-credentials">
+          <div>Телефон: <strong>+375${phone}</strong></div>
+          <div>Пароль: <strong>${password === "***" ? "ваш пароль" : password}</strong></div>
+        </div>
+        <button class="booking-btn" onclick="openClientCabinet()" style="margin-top:15px">
+          Войти в личный кабинет
+        </button>
+      </div>
+      
+      <div class="booking-btn" style="margin-top:20px" onclick="closeModal()">Закрыть</div>
     </div>
   `;
 }
+
+function openClientCabinet() {
+  // Сохраняем токен авторизации если он есть из формы
+  const phone = document.getElementById("client-phone")?.value;
+  const password = document.getElementById("client-password")?.value;
+  
+  if (phone && password && clientFormMode === "new-client") {
+    // Для новых клиентов сразу авторизуемся в кабинете
+    const normalizedPhone = "+375" + phone.trim();
+    
+    fetch(`${API_URL}/client/auth`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        phone: normalizedPhone,
+        password,
+        mode: 'login'
+      }),
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.token) {
+        localStorage.setItem('client_token', data.token);
+      }
+      window.open('/client-cabinet.html', '_blank');
+    })
+    .catch(() => {
+      window.open('/client-cabinet.html', '_blank');
+    });
+  } else {
+    window.open('/client-cabinet.html', '_blank');
+  }
+}
+
+function getEndTime(start, duration) {
+  const end = new Date(start.getTime() + duration * 60000);
+  return end.toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"});
+}
+
 
 // Плавающая кнопка
 // document.addEventListener("DOMContentLoaded", () => {

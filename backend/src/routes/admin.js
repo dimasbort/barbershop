@@ -114,7 +114,7 @@ router.delete("/services/:id", verifyAdmin, async (req, res) => {
 router.post("/specialist-service", verifyAdmin, async (req, res) => {
   const { specialistId, serviceId, price, duration_min } = req.body;
   const [row, created] = await SpecialistService.findOrCreate({
-    where: { SpecialistId: specialistId, ServiceId: serviceId },
+    where: { specialistId: specialistId, serviceId: serviceId },
     defaults: { price, duration_min },
   });
   if (!created) await row.update({ price, duration_min });
@@ -124,7 +124,7 @@ router.post("/specialist-service", verifyAdmin, async (req, res) => {
 router.delete("/specialist-service", verifyAdmin, async (req, res) => {
   const { specialistId, serviceId } = req.body;
   await SpecialistService.destroy({
-    where: { SpecialistId: specialistId, ServiceId: serviceId },
+    where: { specialistId: specialistId, serviceId: serviceId },
   });
   res.json({ success: true });
 });
@@ -136,7 +136,7 @@ router.get("/available-dates/:specialistId", verifyAdmin, async (req, res) => {
   today.setHours(0, 0, 0, 0);
   const rows = await AvailableDate.findAll({
     where: {
-      SpecialistId: req.params.specialistId,
+      specialistId: req.params.specialistId,
       date: { [Op.gte]: today },
     },
     order: [["date", "ASC"]],
@@ -147,7 +147,7 @@ router.get("/available-dates/:specialistId", verifyAdmin, async (req, res) => {
 router.post("/available-dates", verifyAdmin, async (req, res) => {
   const { specialistId, date, isAvailable, customStart, customEnd } = req.body;
   const [row, created] = await AvailableDate.findOrCreate({
-    where: { SpecialistId: specialistId, date },
+    where: { specialistId: specialistId, date },
     defaults: { isAvailable, customStart, customEnd },
   });
   if (!created) await row.update({ isAvailable, customStart, customEnd });
