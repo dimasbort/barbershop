@@ -292,6 +292,11 @@ body {
 }
 .weekday-row input:focus { border-color: #b59e5c; }
 
+.weekday-row .time-part {
+  width: 48px;
+  text-align: center;
+}
+
 .weekday-row span { color: #666; font-size: 14px; }
 
 /* ── Модалки ── */
@@ -372,5 +377,81 @@ body {
 
 .tag-delete:hover {
   color: #e74c3c;
+}
+
+@media (max-width: 760px) {
+  .screen.active {
+    flex-direction: column;
+  }
+
+  #screen-main {
+    min-height: 100vh;
+  }
+
+  .sidebar {
+    width: 100%;
+    min-height: auto;
+    border-right: none;
+    border-bottom: 1px solid #2a2a2a;
+    padding: 12px 0;
+  }
+
+  .sidebar-logo {
+    padding-bottom: 12px;
+    margin-bottom: 10px;
+  }
+
+  .sidebar nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    padding: 0 12px;
+  }
+
+  .nav-item {
+    border-left: none;
+    border-radius: 8px;
+    padding: 10px 12px;
+    text-align: center;
+  }
+
+  .logout-btn {
+    margin: 12px;
+  }
+
+  .main-content {
+    padding: 20px 14px;
+  }
+
+  .page-header,
+  .appt-card,
+  .item-card {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .item-actions {
+    justify-content: flex-start;
+  }
+
+  .schedule-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .modal-box {
+    width: calc(100vw - 24px);
+    max-height: 90vh;
+    padding: 20px;
+  }
+
+  .weekday-row {
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .weekday-row input {
+    width: 80px;
+  }
 }
 

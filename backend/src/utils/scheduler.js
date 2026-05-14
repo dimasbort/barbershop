@@ -5,46 +5,73 @@ import Appointment from "../models/Appointment.js";
 import Specialist from "../models/Specialist.js";
 import Service from "../models/Service.js";
 
+export async function sendAppointmentReminders(now = new Date()) {
+  const inOneHour = new Date(now.getTime() + 60 * 60 * 1000);
+
+  const appointments = await Appointment.findAll({
+    where: {
+      confirmed: true,
+      notified: false,
+      datetime_start: { [Op.between]: [now, inOneHour] },
+    },
+    include: [Specialist, Service],
+  });
+
+  if (appointments.length === 0) {
+    return { found: 0, sent: 0, failed: 0 };
+  }
+
+  console.log(`📅 Найдено ${appointments.length} записей для напоминания`);
+
+  let sent = 0;
+  let failed = 0;
+
+  for (const a of appointments) {
+    const specialistName = a.Specialist?.name || "специалиста";
+    const message = `До визита к специалисту ${specialistName} остался 1 час. Барбершоп "Андрей Палыч"`;
+
+    const result = await sendSMS(a.client_phone, message, `reminder_${a.id}`);
+    
+    if (result?.success !== false) {
+      a.notified = true;
+      await a.save();
+      sent += 1;
+      console.log(`📲 Напоминание отправлено → ${a.client_phone} (${specialistName})`);
+    } else {
+      failed += 1;
+      console.error(`❌ Не удалось отправить напоминание на ${a.client_phone}:`, result?.error);
+    }
+
+    // Добавляем задержку 1 секунда между SMS (rate limiting)
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+
+  return { found: appointments.length, sent, failed };
+}
+
+export async function cleanupOldAppointments(now = new Date()) {
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
+
+  const deleted = await Appointment.destroy({
+    where: {
+      datetime_start: { [Op.lt]: todayStart },
+    },
+  });
+
+  if (deleted > 0) {
+    console.log(`🗑️ Автоочистка: удалено ${deleted} старых записей`);
+  }
+
+  return deleted;
+}
+
 export function initScheduler() {
 
   // ── SMS-напоминания за час до визита (каждые 30 мин в 00 и 30) ──
   cron.schedule("0,30 * * * *", async () => {
     try {
-      const now = new Date();
-      const inOneHour = new Date(now.getTime() + 60 * 60 * 1000);
-
-      const appointments = await Appointment.findAll({
-        where: {
-          confirmed: true,
-          notified: false,
-          datetime_start: { [Op.between]: [now, inOneHour] },
-        },
-        include: [Specialist, Service],
-      });
-
-      if (appointments.length === 0) {
-        return; // Нет записей для уведомления
-      }
-
-      console.log(`📅 Найдено ${appointments.length} записей для напоминания`);
-
-      for (const a of appointments) {
-        const specialistName = a.Specialist?.name || "специалиста";
-        const message = `До визита к специалисту ${specialistName} остался 1 час. Барбершоп "Андрей Палыч"`;
-
-        const result = await sendSMS(a.client_phone, message, `reminder_${a.id}`);
-        
-        if (result?.success !== false) {
-          a.notified = true;
-          await a.save();
-          console.log(`📲 Напоминание отправлено → ${a.client_phone} (${specialistName})`);
-        } else {
-          console.error(`❌ Не удалось отправить напоминание на ${a.client_phone}:`, result?.error);
-        }
-
-        // Добавляем задержку 1 секунда между SMS (rate limiting)
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
+      await sendAppointmentReminders();
     } catch (err) {
       console.error("SMS reminder scheduler error:", err.message);
     }
@@ -53,19 +80,7 @@ export function initScheduler() {
   // ── Автоочистка старых записей (каждый день в 03:00) ───────────
   cron.schedule("0 3 * * *", async () => {
     try {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      yesterday.setHours(23, 59, 59, 999);
-
-      const deleted = await Appointment.destroy({
-        where: {
-          datetime_start: { [Op.lte]: yesterday },
-        },
-      });
-
-      if (deleted > 0) {
-        console.log(`🗑️ Автоочистка: удалено ${deleted} старых записей`);
-      }
+      await cleanupOldAppointments();
     } catch (err) {
       console.error("Cleanup scheduler error:", err.message);
     }

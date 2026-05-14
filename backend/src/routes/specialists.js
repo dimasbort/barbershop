@@ -39,15 +39,6 @@ router.get("/:id/services", async (req, res) => {
   }
 });
 
-router.post("/", async (req, res) => {
-  try {
-    const specialist = await Specialist.create(req.body);
-    res.status(201).json(specialist);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
 // Все специалисты с услугами (публичный, для сайта)
 router.get("/with-services", async (req, res) => {
   try {

@@ -1,13 +1,18 @@
-const API_URL = window.location.hostname === 'andreipalych.by' || window.location.hostname === 'www.andreipalych.by'
-  ? "https://barbershop-api-xxxx.onrender.com/api"  // замени на твой реальный URL
-  : "http://localhost:4000/api";
+const API_URL = window.BARBERSHOP_API_URL
+  || (["localhost", "127.0.0.1", ""].includes(window.location.hostname)
+    ? "http://localhost:4000/api"
+    : `${window.location.origin}/api`);
+const BARBERSHOP_TIME_ZONE = "Europe/Minsk";
 
 let clientToken = localStorage.getItem('client_token');
+let clientProfile = null;
+let resetPhone = null;
 
 // Инициализация при загрузке страницы
 window.addEventListener('DOMContentLoaded', () => {
   if (clientToken) {
     showCabinet();
+    loadProfile();
     loadAppointments();
   } else {
     showLoginForm();
@@ -17,12 +22,22 @@ window.addEventListener('DOMContentLoaded', () => {
 // Показать форму входа
 function showLoginForm() {
   document.getElementById('login-form').classList.add('active');
+  document.getElementById('reset-form').classList.remove('active');
   document.getElementById('cabinet-content').classList.remove('active');
+}
+
+function showResetForm() {
+  document.getElementById('login-form').classList.remove('active');
+  document.getElementById('reset-form').classList.add('active');
+  document.getElementById('cabinet-content').classList.remove('active');
+  document.getElementById('reset-step-phone').style.display = 'block';
+  document.getElementById('reset-step-code').style.display = 'none';
 }
 
 // Показать содержимое кабинета
 function showCabinet() {
   document.getElementById('login-form').classList.remove('active');
+  document.getElementById('reset-form').classList.remove('active');
   document.getElementById('cabinet-content').classList.add('active');
 }
 
@@ -65,6 +80,7 @@ async function clientLogin() {
     errorEl.style.display = 'none';
     
     showCabinet();
+    loadProfile();
     loadAppointments();
   } catch (err) {
     console.error('Login error:', err);
@@ -77,12 +93,174 @@ async function clientLogin() {
 function clientLogout() {
   localStorage.removeItem('client_token');
   clientToken = null;
+  clientProfile = null;
   showLoginForm();
   
   // Очищаем форму
   document.getElementById('login-phone').value = '';
   document.getElementById('login-password').value = '';
   document.getElementById('login-error').style.display = 'none';
+}
+
+async function authedFetch(path, options = {}) {
+  const res = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${clientToken}`,
+      ...(options.headers || {}),
+    },
+  });
+
+  const data = await res.json();
+  if (res.status === 401) {
+    clientLogout();
+    throw new Error(data.error || 'Сессия истекла');
+  }
+  return { res, data };
+}
+
+async function loadProfile() {
+  try {
+    const { data } = await authedFetch('/client/profile');
+    if (data.error) return;
+
+    clientProfile = data;
+    document.getElementById('profile-name').value = data.name || '';
+  } catch (err) {
+    console.error('Profile error:', err);
+  }
+}
+
+async function updateProfileName() {
+  const name = document.getElementById('profile-name').value.trim();
+  const msgEl = document.getElementById('profile-name-message');
+  const errEl = document.getElementById('profile-name-error');
+  msgEl.style.display = 'none';
+  errEl.style.display = 'none';
+
+  try {
+    const { res, data } = await authedFetch('/client/profile', {
+      method: 'PUT',
+      body: JSON.stringify({ name }),
+    });
+
+    if (!res.ok || data.error) {
+      errEl.textContent = data.error || 'Не удалось сохранить имя';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    clientProfile = data.client;
+    if (data.token) {
+      clientToken = data.token;
+      localStorage.setItem('client_token', clientToken);
+    }
+    msgEl.textContent = 'Имя сохранено';
+    msgEl.style.display = 'block';
+  } catch (err) {
+    errEl.textContent = err.message || 'Ошибка сети';
+    errEl.style.display = 'block';
+  }
+}
+
+async function changePassword() {
+  const currentPassword = document.getElementById('current-password').value.trim();
+  const newPassword = document.getElementById('new-password').value.trim();
+  const msgEl = document.getElementById('password-message');
+  const errEl = document.getElementById('password-error');
+  msgEl.style.display = 'none';
+  errEl.style.display = 'none';
+
+  try {
+    const { res, data } = await authedFetch('/client/password', {
+      method: 'PUT',
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword,
+      }),
+    });
+
+    if (!res.ok || data.error) {
+      errEl.textContent = data.error || 'Не удалось изменить пароль';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    document.getElementById('current-password').value = '';
+    document.getElementById('new-password').value = '';
+    msgEl.textContent = 'Пароль изменён';
+    msgEl.style.display = 'block';
+  } catch (err) {
+    errEl.textContent = err.message || 'Ошибка сети';
+    errEl.style.display = 'block';
+  }
+}
+
+async function requestPasswordReset() {
+  const phone = document.getElementById('reset-phone').value.trim();
+  const errEl = document.getElementById('reset-request-error');
+  const msgEl = document.getElementById('reset-request-success');
+  errEl.style.display = 'none';
+  msgEl.style.display = 'none';
+
+  try {
+    const res = await fetch(`${API_URL}/client/password-reset/request`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ phone }),
+    });
+    const data = await res.json();
+
+    if (!res.ok || data.error) {
+      errEl.textContent = data.error || 'Не удалось отправить SMS-код';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    resetPhone = phone;
+    msgEl.textContent = `Код отправлен. Он действует ${data.expires_in_minutes || 5} минут.`;
+    msgEl.style.display = 'block';
+    document.getElementById('reset-step-code').style.display = 'block';
+  } catch (err) {
+    errEl.textContent = 'Ошибка сети. Попробуйте еще раз.';
+    errEl.style.display = 'block';
+  }
+}
+
+async function confirmPasswordReset() {
+  const code = document.getElementById('reset-code').value.trim();
+  const newPassword = document.getElementById('reset-new-password').value.trim();
+  const errEl = document.getElementById('reset-confirm-error');
+  errEl.style.display = 'none';
+
+  try {
+    const res = await fetch(`${API_URL}/client/password-reset/confirm`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        phone: resetPhone || document.getElementById('reset-phone').value.trim(),
+        code,
+        new_password: newPassword,
+      }),
+    });
+    const data = await res.json();
+
+    if (!res.ok || data.error) {
+      errEl.textContent = data.error || 'Не удалось восстановить пароль';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    clientToken = data.token;
+    localStorage.setItem('client_token', clientToken);
+    showCabinet();
+    loadProfile();
+    loadAppointments();
+  } catch (err) {
+    errEl.textContent = 'Ошибка сети. Попробуйте еще раз.';
+    errEl.style.display = 'block';
+  }
 }
 
 // Загрузка записей клиента
@@ -118,10 +296,11 @@ async function loadAppointments() {
         weekday: 'long', 
         day: 'numeric', 
         month: 'long', 
-        year: 'numeric'
+        year: 'numeric',
+        timeZone: BARBERSHOP_TIME_ZONE
       });
-      const timeStr = dt.toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'});
-      const endTimeStr = new Date(app.datetime_end).toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'});
+      const timeStr = dt.toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit', timeZone: BARBERSHOP_TIME_ZONE});
+      const endTimeStr = new Date(app.datetime_end).toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit', timeZone: BARBERSHOP_TIME_ZONE});
       
       // Можно ли отменить (больше 2 часов до записи)
       const now = new Date();

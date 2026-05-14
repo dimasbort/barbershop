@@ -1,4 +1,8 @@
-const API_URL = "http://localhost:4000/api";
+const API_URL = window.BARBERSHOP_API_URL
+  || (["localhost", "127.0.0.1", ""].includes(window.location.hostname)
+    ? "http://localhost:4000/api"
+    : `${window.location.origin}/api`);
+const BARBERSHOP_TIME_ZONE = "Europe/Minsk";
 
 // Состояние виджета
 let bookingData = {};
@@ -48,6 +52,10 @@ document.addEventListener("DOMContentLoaded", () => {
       openModal();
     });
   });
+
+  if (window.location.hash === "#booking") {
+    setTimeout(openModal, 100);
+  }
 });
 
 // История шагов для кнопки «Назад»
@@ -283,7 +291,7 @@ function selectDay(dateStr, el) {
   if (morning.length) {
     html += `<div class="slots-header">Утро</div><div class="slots-grid">`;
     morning.forEach(sl => {
-      const t = new Date(sl).toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"});
+      const t = new Date(sl).toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit", timeZone: BARBERSHOP_TIME_ZONE});
       html += `<div class="time-slot" onclick="chooseSlot('${sl}', this)">${t}</div>`;
     });
     html += `</div>`;
@@ -292,7 +300,7 @@ function selectDay(dateStr, el) {
   if (day.length) {
     html += `<div class="slots-header">День</div><div class="slots-grid">`;
     day.forEach(sl => {
-      const t = new Date(sl).toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"});
+      const t = new Date(sl).toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit", timeZone: BARBERSHOP_TIME_ZONE});
       html += `<div class="time-slot" onclick="chooseSlot('${sl}', this)">${t}</div>`;
     });
     html += `</div>`;
@@ -301,7 +309,7 @@ function selectDay(dateStr, el) {
   if (evening.length) {
     html += `<div class="slots-header">Вечер</div><div class="slots-grid">`;
     evening.forEach(sl => {
-      const t = new Date(sl).toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"});
+      const t = new Date(sl).toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit", timeZone: BARBERSHOP_TIME_ZONE});
       html += `<div class="time-slot" onclick="chooseSlot('${sl}', this)">${t}</div>`;
     });
     html += `</div>`;
@@ -336,8 +344,8 @@ function showClientForm() {
 
 function renderClientForm() {
   const dt = new Date(bookingData.datetime_start);
-  const dateStr = dt.toLocaleDateString("ru-RU", {weekday:"long", day:"numeric", month:"long"});
-  const timeStr = dt.toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"});
+  const dateStr = dt.toLocaleDateString("ru-RU", {weekday:"long", day:"numeric", month:"long", timeZone: BARBERSHOP_TIME_ZONE});
+  const timeStr = dt.toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit", timeZone: BARBERSHOP_TIME_ZONE});
 
   let formHTML = `
     <div class="booking-section-title">Детали записи</div>
@@ -535,6 +543,9 @@ async function submitBookingExisting() {
       errEl.style.display = "block";
       return;
     }
+    if (authData.token) {
+      localStorage.setItem("client_token", authData.token);
+    }
 
     // Теперь создаём запись
     const appointmentData = {
@@ -642,8 +653,8 @@ function showSuccessStep(name, phone, password, isExisting) {
       <h3>Вы успешно записаны!</h3>
       <p><strong>${bookingData.specialistName}</strong></p>
       <p>${bookingData.serviceName}</p>
-      <p>${dt.toLocaleDateString("ru-RU", {weekday:"long", day:"numeric", month:"long"})},
-         ${dt.toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"})}</p>
+      <p>${dt.toLocaleDateString("ru-RU", {weekday:"long", day:"numeric", month:"long", timeZone: BARBERSHOP_TIME_ZONE})},
+         ${dt.toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit", timeZone: BARBERSHOP_TIME_ZONE})}</p>
       
       <div class="cabinet-info">
         <h4>📱 Личный кабинет</h4>
@@ -697,7 +708,7 @@ function openClientCabinet() {
 
 function getEndTime(start, duration) {
   const end = new Date(start.getTime() + duration * 60000);
-  return end.toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"});
+  return end.toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit", timeZone: BARBERSHOP_TIME_ZONE});
 }
 
 

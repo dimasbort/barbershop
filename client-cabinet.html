@@ -88,6 +88,50 @@
       margin-bottom: 10px;
       padding: 0 2px;
     }
+    .form-success {
+      color: #8fd18f;
+      font-size: 13px;
+      margin-bottom: 10px;
+      padding: 0 2px;
+    }
+    .text-link {
+      background: none;
+      border: none;
+      color: #b59e5c;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 0;
+      text-decoration: none;
+    }
+    .text-link:hover {
+      text-decoration: underline;
+    }
+    .profile-panel {
+      background: #202020;
+      border: 1px solid #333;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      padding: 18px;
+    }
+    .profile-panel h3 {
+      color: #b59e5c;
+      font-size: 18px;
+      margin: 0 0 14px;
+    }
+    .profile-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+    .profile-section {
+      min-width: 0;
+    }
+    .profile-section-title {
+      color: #ccc;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
     .appointment-item {
       background: #222;
       border-radius: 12px;
@@ -162,6 +206,38 @@
     .back-to-site a:hover {
       text-decoration: underline;
     }
+    @media (max-width: 640px) {
+      .cabinet-container {
+        margin: 0;
+        min-height: 100vh;
+        border-radius: 0;
+        padding: 18px 14px;
+      }
+      .cabinet-header h1 {
+        font-size: 24px;
+      }
+      .cabinet-top {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .cabinet-top > div {
+        flex-direction: column;
+      }
+      .booking-btn.small {
+        width: 100%;
+      }
+      .appointment-item {
+        align-items: stretch;
+        flex-direction: column;
+      }
+      .profile-grid {
+        grid-template-columns: 1fr;
+      }
+      .btn-cancel {
+        width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
@@ -179,9 +255,35 @@
         <input id="login-password" class="booking-input" type="password" placeholder="Пароль">
         <div id="login-error" class="form-error" style="display: none;"></div>
         <button class="booking-btn" onclick="clientLogin()">Войти</button>
+        <div style="text-align:center; margin-top: 14px;">
+          <button class="text-link" onclick="showResetForm()">Забыл пароль?</button>
+        </div>
         
         <div class="back-to-site">
           <a href="/">← Вернуться на сайт</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Восстановление пароля -->
+    <div id="reset-form" class="screen">
+      <div class="login-form">
+        <div id="reset-step-phone">
+          <input id="reset-phone" class="booking-input" placeholder="Номер телефона (+375...)">
+          <div id="reset-request-error" class="form-error" style="display: none;"></div>
+          <div id="reset-request-success" class="form-success" style="display: none;"></div>
+          <button class="booking-btn" onclick="requestPasswordReset()">Получить SMS-код</button>
+        </div>
+
+        <div id="reset-step-code" style="display: none;">
+          <input id="reset-code" class="booking-input" inputmode="numeric" maxlength="6" placeholder="Код из SMS">
+          <input id="reset-new-password" class="booking-input" type="password" placeholder="Новый пароль">
+          <div id="reset-confirm-error" class="form-error" style="display: none;"></div>
+          <button class="booking-btn" onclick="confirmPasswordReset()">Сменить пароль</button>
+        </div>
+
+        <div class="back-to-site">
+          <button class="text-link" onclick="showLoginForm()">← Вернуться ко входу</button>
         </div>
       </div>
     </div>
@@ -193,6 +295,27 @@
         <div style="display: flex; gap: 10px;">
           <button class="booking-btn small" onclick="openBookingWidget()">+ Новая запись</button>
           <button class="booking-btn small" onclick="clientLogout()">Выйти</button>
+        </div>
+      </div>
+
+      <div class="profile-panel">
+        <h3>Профиль</h3>
+        <div class="profile-grid">
+          <div class="profile-section">
+            <div class="profile-section-title">Имя</div>
+            <input id="profile-name" class="booking-input" placeholder="Ваше имя">
+            <div id="profile-name-message" class="form-success" style="display: none;"></div>
+            <div id="profile-name-error" class="form-error" style="display: none;"></div>
+            <button class="booking-btn small" onclick="updateProfileName()">Сохранить имя</button>
+          </div>
+          <div class="profile-section">
+            <div class="profile-section-title">Пароль</div>
+            <input id="current-password" class="booking-input" type="password" placeholder="Текущий пароль">
+            <input id="new-password" class="booking-input" type="password" placeholder="Новый пароль">
+            <div id="password-message" class="form-success" style="display: none;"></div>
+            <div id="password-error" class="form-error" style="display: none;"></div>
+            <button class="booking-btn small" onclick="changePassword()">Изменить пароль</button>
+          </div>
         </div>
       </div>
       

@@ -14,16 +14,42 @@ const router = express.Router();
 
 // Создание первого администратора (временный маршрут)
 router.post("/register", async (req, res) => {
-  const { username, password } = req.body;
-  const hash = await bcrypt.hash(password, 10);
-  const admin = await Admin.create({ username, password_hash: hash });
-  res.json(admin);
+  try {
+    const { username, password } = req.body;
+    if (!username || !password || password.length < 8) {
+      return res.status(400).json({ error: "Username and password with at least 8 characters are required" });
+    }
+
+    const adminsCount = await Admin.count();
+    if (adminsCount > 0) {
+      const authHeader = req.headers.authorization;
+      if (!authHeader) return res.status(403).json({ error: "Admin registration is closed" });
+
+      const token = authHeader.split(" ")[1];
+      jwt.verify(token, process.env.JWT_SECRET || "secretkey");
+    }
+
+    const hash = await bcrypt.hash(password, 10);
+    const admin = await Admin.create({ username, password_hash: hash });
+    res.status(201).json({ id: admin.id, username: admin.username });
+  } catch (err) {
+    if (err.name === "JsonWebTokenError" || err.name === "TokenExpiredError") {
+      return res.status(403).json({ error: "Invalid admin token" });
+    }
+    if (err.name === "SequelizeUniqueConstraintError") {
+      return res.status(409).json({ error: "Admin already exists" });
+    }
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
 });
 
 // ── Авторизация ──────────────────────────────
 
 router.post("/login", async (req, res) => {
   const { username, password } = req.body;
+  if (!username || !password) return res.status(400).json({ error: "Username and password are required" });
+
   const admin = await Admin.findOne({ where: { username } });
   if (!admin) return res.status(401).json({ error: "Invalid credentials" });
 
@@ -74,8 +100,9 @@ router.get("/specialists", verifyAdmin, async (req, res) => {
 
 
 router.post("/specialists", verifyAdmin, async (req, res) => {
+  if (!req.body.name) return res.status(400).json({ error: "Specialist name is required" });
   const s = await Specialist.create(req.body);
-  res.json(s);
+  res.status(201).json(s);
 });
 
 router.put("/specialists/:id", verifyAdmin, async (req, res) => {
@@ -93,8 +120,9 @@ router.get("/services", verifyAdmin, async (req, res) => {
 });
 
 router.post("/services", verifyAdmin, async (req, res) => {
+  if (!req.body.name) return res.status(400).json({ error: "Service name is required" });
   const s = await Service.create(req.body);
-  res.json(s);
+  res.status(201).json(s);
 });
 
 router.put("/services/:id", verifyAdmin, async (req, res) => {
@@ -105,6 +133,7 @@ router.put("/services/:id", verifyAdmin, async (req, res) => {
 });
 
 router.delete("/services/:id", verifyAdmin, async (req, res) => {
+  await SpecialistService.destroy({ where: { serviceId: req.params.id } });
   await Service.destroy({ where: { id: req.params.id } });
   res.json({ success: true });
 });
@@ -113,6 +142,10 @@ router.delete("/services/:id", verifyAdmin, async (req, res) => {
 
 router.post("/specialist-service", verifyAdmin, async (req, res) => {
   const { specialistId, serviceId, price, duration_min } = req.body;
+  if (!specialistId || !serviceId || !Number(price) || !Number(duration_min)) {
+    return res.status(400).json({ error: "Specialist, service, price and duration are required" });
+  }
+
   const [row, created] = await SpecialistService.findOrCreate({
     where: { specialistId: specialistId, serviceId: serviceId },
     defaults: { price, duration_min },

@@ -13,6 +13,7 @@ import "./models/Appointment.js";
 import "./models/AvailableDate.js";
 import "./models/SpecialistService.js";
 import "./models/Client.js";
+import "./models/PasswordResetCode.js";
 
 import specialistsRouter from "./routes/specialists.js";
 import servicesRouter from "./routes/services.js";
@@ -43,9 +44,18 @@ app.get("/admin/{*path}", (req, res) => {
   res.sendFile(path.join(__dirname, "../admin/index.html"));
 });
 
-await sequelize.sync({ alter: true });
-console.log("DB ready");
+export { app };
 
-initScheduler();
+export async function startServer(port = process.env.PORT || 4000) {
+  const shouldAlterDb = process.env.DB_SYNC_ALTER !== "false";
+  await sequelize.sync({ alter: shouldAlterDb });
+  console.log("DB ready");
 
-app.listen(4000, () => console.log("Backend: [localhost](http://localhost:4000)"));
+  initScheduler();
+
+  return app.listen(port, () => console.log(`Backend: http://localhost:${port}`));
+}
+
+if (process.env.NODE_ENV !== "test") {
+  await startServer();
+}

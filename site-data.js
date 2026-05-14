@@ -1,4 +1,7 @@
-const API_URL = "http://localhost:4000/api";
+const API_URL = window.BARBERSHOP_API_URL
+  || (["localhost", "127.0.0.1", ""].includes(window.location.hostname)
+    ? "http://localhost:4000/api"
+    : `${window.location.origin}/api`);
 
 document.addEventListener("DOMContentLoaded", async () => {
   try {

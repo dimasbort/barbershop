@@ -1,39 +1,57 @@
-import RocketSMS from "node-rocketsms-api";
+import axios from "axios";
+import crypto from "crypto";
 
-// Инициализация клиента SMS Rocket
-const smsClient = new RocketSMS(
-  process.env.SMS_ROCKET_USERNAME,
-  process.env.SMS_ROCKET_PASSWORD
-);
+const SMS_API_BASE = "https://api.rocketsms.by/simple";
 
-/**
- * Отправка SMS через SMS Rocket
- * @param {string} phone - номер телефона (375291234567 или +375291234567)
- * @param {string} message - текст сообщения
- * @param {string} extraId - внешний идентификатор (необязательно)
- */
+function getSmsCredentials() {
+  const username = process.env.SMS_ROCKET_USERNAME;
+  const password = process.env.SMS_ROCKET_PASSWORD;
+
+  if (!username || !password) {
+    return null;
+  }
+
+  return {
+    username,
+    password: crypto.createHash("md5").update(password).digest("hex"),
+  };
+}
+
 export async function sendSMS(phone, message, extraId = null) {
   try {
+    const credentials = getSmsCredentials();
+    if (!credentials) {
+      console.warn("SMS Rocket credentials are not configured; SMS skipped");
+      return { success: false, error: "SMS credentials are not configured" };
+    }
+
     // Нормализуем номер: оставляем только цифры
     const normalizedPhone = phone.replace(/\D/g, "");
     
-    // SMS Rocket ожидает номер в формате +375XXXXXXXX
-    const formattedPhone = normalizedPhone.startsWith("375") 
-      ? `+${normalizedPhone}` 
-      : phone;
-
-    const result = await smsClient.sendSMS(formattedPhone, message);
-
-    if (result && result.success) {
-      console.log(`📲 SMS отправлено на ${formattedPhone}, ID: ${result.id || 'N/A'}`);
-      return result;
-    } else {
-      console.error("SMS Rocket error:", result?.error || "Unknown error");
-      return { success: false, error: result?.error || "Failed to send SMS" };
+    if (!/^375\d{9}$/.test(normalizedPhone)) {
+      return { success: false, error: "Invalid Belarus phone number" };
     }
+
+    const params = new URLSearchParams({
+      ...credentials,
+      phone: normalizedPhone,
+      text: message,
+    });
+
+    const { data } = await axios.post(`${SMS_API_BASE}/send`, params, {
+      timeout: 10000,
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    });
+
+    if (data?.error) {
+      return { success: false, error: data.error, details: data };
+    }
+
+    console.log(`📲 SMS отправлено на +${normalizedPhone}, ID: ${data?.id || extraId || "N/A"}`);
+    return { success: true, ...data };
   } catch (err) {
     console.error("Ошибка отправки SMS через SMS Rocket:", err.message);
-    return { success: false, error: err.message };
+    return { success: false, error: err.message, details: err };
   }
 }
 
@@ -42,9 +60,24 @@ export async function sendSMS(phone, message, extraId = null) {
  */
 export async function checkSMSBalance() {
   try {
-    const balance = await smsClient.getBalance();
-    console.log(`💰 SMS Rocket баланс: ${balance}`);
-    return balance;
+    const credentials = getSmsCredentials();
+    if (!credentials) {
+      console.warn("SMS Rocket credentials are not configured; balance check skipped");
+      return null;
+    }
+
+    const { data } = await axios.get(`${SMS_API_BASE}/balance`, {
+      timeout: 10000,
+      params: credentials,
+    });
+
+    if (data?.error) {
+      console.error("SMS Rocket balance error:", data.error);
+      return null;
+    }
+
+    console.log(`💰 SMS Rocket баланс: ${JSON.stringify(data)}`);
+    return data;
   } catch (err) {
     console.error("Ошибка получения баланса:", err.message);
     return null;

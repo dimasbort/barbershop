@@ -7,9 +7,60 @@ import Service from "../models/Service.js";
 import AvailableDate from "../models/AvailableDate.js";
 import SpecialistService from "../models/SpecialistService.js";
 import { sendBookingConfirmation } from "../utils/scheduler.js";
+import sequelize from "../models/index.js";
 import { Op } from "sequelize";
 
 const router = express.Router();
+const BARBERSHOP_TIME_ZONE = "Europe/Minsk";
+
+function getDateInBarbershopTz(date) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: BARBERSHOP_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+
+  const value = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return `${value.year}-${value.month}-${value.day}`;
+}
+
+function getMinutesInBarbershopTz(date) {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: BARBERSHOP_TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+
+  const value = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return Number(value.hour) * 60 + Number(value.minute);
+}
+
+function getWeekdayKey(dateString) {
+  const [year, month, day] = dateString.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][date.getUTCDay()];
+}
+
+function parseTimeToMinutes(time) {
+  const [hours, minutes] = time.split(":").map(Number);
+  if (!Number.isInteger(hours) || !Number.isInteger(minutes)) return null;
+  return hours * 60 + minutes;
+}
+
+function createBarbershopDateTime(dateString, time) {
+  const [year, month, day] = dateString.split("-").map(Number);
+  const [hours, minutes] = time.split(":").map(Number);
+  return new Date(Date.UTC(year, month - 1, day, hours - 3, minutes, 0, 0));
+}
+
+function normalizeBelarusPhone(phone) {
+  const digits = String(phone || "").replace(/\D/g, "");
+  if (/^375\d{9}$/.test(digits)) return `+${digits}`;
+  if (/^\d{9}$/.test(digits)) return `+375${digits}`;
+  return null;
+}
 
 // Создание новой записи (с автоматической регистрацией клиента)
 router.post("/", async (req, res) => {
@@ -31,10 +82,17 @@ router.post("/", async (req, res) => {
       });
     }
 
-    if (!client_password) {
+    const normalizedPhone = normalizeBelarusPhone(client_phone);
+
+    if (!client_name || !normalizedPhone || !client_password || !datetime_start) {
       return res.status(400).json({ 
-        error: "Необходимо задать пароль для входа в личный кабинет" 
+        error: "Заполните имя, телефон, пароль и время записи" 
       });
+    }
+
+    const startDate = new Date(datetime_start);
+    if (Number.isNaN(startDate.getTime()) || startDate <= new Date()) {
+      return res.status(400).json({ error: "Некорректное время записи" });
     }
 
     const service = await Service.findByPk(serviceId);
@@ -49,46 +107,92 @@ router.post("/", async (req, res) => {
     });
     if (!ss) return res.status(400).json({ error: "Специалист не оказывает данную услугу" });
 
-    const datetimeEnd = new Date(new Date(datetime_start).getTime() + ss.duration_min * 60000);
+    const datetimeEnd = new Date(startDate.getTime() + ss.duration_min * 60000);
 
-    // Проверяем занятость времени
-    const overlap = await Appointment.findOne({
+    const requestedDate = getDateInBarbershopTz(startDate);
+    const availableDate = await AvailableDate.findOne({
       where: {
-        specialistId: specialistId,
-        [Op.or]: [
-          { datetime_start: { [Op.between]: [datetime_start, datetimeEnd] } },
-          { datetime_end: { [Op.between]: [datetime_start, datetimeEnd] } },
-        ],
+        specialistId: specialist.id,
+        date: requestedDate,
+        isAvailable: true,
       },
     });
 
-    if (overlap) {
-      return res.status(400).json({ error: "Выбранное время уже занято" });
+    if (!availableDate) {
+      return res.status(400).json({ error: "Дата недоступна для записи" });
     }
 
-    // Регистрируем/находим клиента
-    let client = await Client.findOne({ where: { phone: client_phone } });
-    
-    if (!client) {
-      const password_hash = await bcrypt.hash(client_password, 10);
-      client = await Client.create({
-        phone: client_phone,
-        name: client_name,
-        password_hash,
-        gdpr_consent: true,
+    const intervals = availableDate.customStart && availableDate.customEnd
+      ? [`${availableDate.customStart}-${availableDate.customEnd}`]
+      : specialist.schedule?.[getWeekdayKey(requestedDate)] || [];
+
+    const startMinutes = getMinutesInBarbershopTz(startDate);
+    const endMinutes = startMinutes + ss.duration_min;
+    const insideWorkingHours = intervals.some(interval => {
+      const [from, to] = interval.split("-");
+      const fromMinutes = parseTimeToMinutes(from);
+      const toMinutes = parseTimeToMinutes(to);
+      if (fromMinutes === null || toMinutes === null) return false;
+      return startMinutes >= fromMinutes && endMinutes <= toMinutes;
+    });
+
+    if (!insideWorkingHours) {
+      return res.status(400).json({ error: "Время недоступно для записи" });
+    }
+
+    const appointment = await sequelize.transaction(async transaction => {
+      // Повторяем проверку занятости внутри транзакции, чтобы снизить риск двойной записи.
+      const overlap = await Appointment.findOne({
+        where: {
+          specialistId: specialistId,
+          datetime_start: { [Op.lt]: datetimeEnd },
+          datetime_end: { [Op.gt]: startDate },
+        },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
       });
-    }
 
-    // Создаём запись
-    const appointment = await Appointment.create({
-      specialistId: specialistId,
-      serviceId: serviceId,
-      clientId: client.id,
-      client_name,
-      client_phone,
-      datetime_start,
-      datetime_end: datetimeEnd,
-      confirmed: true,
+      if (overlap) {
+        const err = new Error("Выбранное время уже занято");
+        err.status = 400;
+        throw err;
+      }
+
+      // Регистрируем/находим клиента
+      let client = await Client.findOne({
+        where: { phone: normalizedPhone },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+
+      if (!client) {
+        const password_hash = await bcrypt.hash(client_password, 10);
+        client = await Client.create({
+          phone: normalizedPhone,
+          name: client_name,
+          password_hash,
+          gdpr_consent: true,
+        }, { transaction });
+      } else {
+        const validPassword = await bcrypt.compare(client_password, client.password_hash);
+        if (!validPassword) {
+          const err = new Error("Неверный пароль от личного кабинета");
+          err.status = 401;
+          throw err;
+        }
+      }
+
+      // Создаём запись
+      return Appointment.create({
+        specialistId: specialistId,
+        serviceId: serviceId,
+        clientId: client.id,
+        client_name: client.name,
+        client_phone: client.phone,
+        datetime_start: startDate,
+        datetime_end: datetimeEnd,
+        confirmed: true,
+      }, { transaction });
     });
 
     // Отправляем SMS-подтверждение
@@ -96,6 +200,9 @@ router.post("/", async (req, res) => {
 
     res.status(201).json(appointment);
   } catch (err) {
+    if (err.status) {
+      return res.status(err.status).json({ error: err.message });
+    }
     console.error(err);
     res.status(500).json({ error: "Server error" });
   }
@@ -125,8 +232,7 @@ router.get("/:specialistId/available", async (req, res) => {
     });
 
     // Получаем дни, открытые для записи
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = getDateInBarbershopTz(new Date());
 
     const availableDates = await AvailableDate.findAll({
       where: {
@@ -140,7 +246,6 @@ router.get("/:specialistId/available", async (req, res) => {
     const result = [];
 
     for (const ad of availableDates) {
-      const date = new Date(ad.date);
       const dateStr = ad.date;
 
       // Определяем рабочие часы (кастомные или из расписания)
@@ -148,7 +253,7 @@ router.get("/:specialistId/available", async (req, res) => {
       if (ad.customStart && ad.customEnd) {
         intervals = [`${ad.customStart}-${ad.customEnd}`];
       } else {
-        const weekday = ["sun","mon","tue","wed","thu","fri","sat"][date.getDay()];
+        const weekday = getWeekdayKey(dateStr);
         intervals = specialist.schedule?.[weekday] || [];
       }
 
@@ -156,13 +261,8 @@ router.get("/:specialistId/available", async (req, res) => {
 
       for (const interval of intervals) {
         const [start, end] = interval.split("-");
-        const [startH, startM] = start.split(":").map(Number);
-        const [endH, endM] = end.split(":").map(Number);
-
-        const slotStart = new Date(date);
-        slotStart.setHours(startH, startM, 0, 0);
-        const slotEnd = new Date(date);
-        slotEnd.setHours(endH, endM, 0, 0);
+        const slotStart = createBarbershopDateTime(dateStr, start);
+        const slotEnd = createBarbershopDateTime(dateStr, end);
 
         for (
           let time = new Date(slotStart);

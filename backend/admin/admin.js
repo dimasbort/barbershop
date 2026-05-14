@@ -1,7 +1,12 @@
-const API = "http://localhost:4000/api";
+const API = window.BARBERSHOP_API_URL
+  || (["localhost", "127.0.0.1", ""].includes(window.location.hostname)
+    ? "http://localhost:4000/api"
+    : `${window.location.origin}/api`);
+const BARBERSHOP_TIME_ZONE = "Europe/Minsk";
 let token = localStorage.getItem("ap_admin_token") || "";
 let allSpecialists = [];
 let allServices = [];
+const weekdays = ["mon","tue","wed","thu","fri","sat","sun"];
 
 // ── Инициализация ──────────────────────────────────────────────────
 
@@ -48,6 +53,8 @@ async function showMain() {
   // Заполняем фильтр специалистов
   const filterSel = document.getElementById("filter-specialist");
   const scheduleSel = document.getElementById("schedule-specialist");
+  filterSel.innerHTML = `<option value="">Все специалисты</option>`;
+  scheduleSel.innerHTML = `<option value="">Выберите специалиста</option>`;
   allSpecialists.forEach(s => {
     filterSel.innerHTML += `<option value="${s.id}">${s.name}</option>`;
     scheduleSel.innerHTML += `<option value="${s.id}">${s.name}</option>`;
@@ -83,9 +90,9 @@ async function loadAppointments() {
 
   el.innerHTML = rows.map(r => {
     const dt = new Date(r.datetime_start);
-    const dateStr = dt.toLocaleDateString("ru-RU", { weekday:"short", day:"numeric", month:"short" });
-    const timeStr = dt.toLocaleTimeString("ru-RU", { hour:"2-digit", minute:"2-digit" });
-    const endStr = new Date(r.datetime_end).toLocaleTimeString("ru-RU", { hour:"2-digit", minute:"2-digit" });
+    const dateStr = dt.toLocaleDateString("ru-RU", { weekday:"short", day:"numeric", month:"short", timeZone: BARBERSHOP_TIME_ZONE });
+    const timeStr = dt.toLocaleTimeString("ru-RU", { hour:"2-digit", minute:"2-digit", timeZone: BARBERSHOP_TIME_ZONE });
+    const endStr = new Date(r.datetime_end).toLocaleTimeString("ru-RU", { hour:"2-digit", minute:"2-digit", timeZone: BARBERSHOP_TIME_ZONE });
 
     return `
       <div class="appt-card">
@@ -170,18 +177,23 @@ function openSpecialistModal(id) {
   document.getElementById("sp-desc").value = s?.description || "";
 
   // Редактор расписания
-  const days = ["mon","tue","wed","thu","fri","sat","sun"];
   const labels = ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"];
   const schedule = s?.schedule || {};
-  document.getElementById("sp-schedule-editor").innerHTML = days.map((d, i) => {
+  document.getElementById("sp-schedule-editor").innerHTML = weekdays.map((d, i) => {
     const val = schedule[d]?.[0] || "";
     const [from, to] = val ? val.split("-") : ["",""];
+    const [fromH = "", fromM = ""] = from ? from.split(":") : ["", ""];
+    const [toH = "", toM = ""] = to ? to.split(":") : ["", ""];
     return `
       <div class="weekday-row">
         <span class="weekday-label">${labels[i]}</span>
-        <input id="sch-${d}-from" value="${from}" placeholder="09:00">
+        <input id="sch-${d}-from-h" class="time-part" value="${fromH}" placeholder="09" inputmode="numeric" maxlength="2">
+        <span>:</span>
+        <input id="sch-${d}-from-m" class="time-part" value="${fromM}" placeholder="00" inputmode="numeric" maxlength="2">
         <span>—</span>
-        <input id="sch-${d}-to"   value="${to}"   placeholder="18:00">
+        <input id="sch-${d}-to-h" class="time-part" value="${toH}" placeholder="18" inputmode="numeric" maxlength="2">
+        <span>:</span>
+        <input id="sch-${d}-to-m" class="time-part" value="${toM}" placeholder="00" inputmode="numeric" maxlength="2">
       </div>`;
   }).join("");
 
@@ -190,12 +202,13 @@ function openSpecialistModal(id) {
 
 async function saveSpecialist() {
   const id = document.getElementById("sp-id").value;
-  const days = ["mon","tue","wed","thu","fri","sat","sun"];
   const schedule = {};
-  days.forEach(d => {
-    const from = document.getElementById(`sch-${d}-from`).value.trim();
-    const to   = document.getElementById(`sch-${d}-to`).value.trim();
-    schedule[d] = (from && to) ? [`${from}-${to}`] : [];
+  weekdays.forEach(d => {
+    const fromH = normalizeTimePart(document.getElementById(`sch-${d}-from-h`).value, 23);
+    const fromM = normalizeTimePart(document.getElementById(`sch-${d}-from-m`).value, 59);
+    const toH = normalizeTimePart(document.getElementById(`sch-${d}-to-h`).value, 23);
+    const toM = normalizeTimePart(document.getElementById(`sch-${d}-to-m`).value, 59);
+    schedule[d] = (fromH && fromM && toH && toM) ? [`${fromH}:${fromM}-${toH}:${toM}`] : [];
   });
 
   const body = {
@@ -214,6 +227,14 @@ async function saveSpecialist() {
   closeModal("modal-specialist");
   allSpecialists = await api("GET", "/admin/specialists");
   loadSpecialistsList();
+}
+
+function normalizeTimePart(value, max) {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (!digits) return "";
+
+  const number = Math.min(Number(digits), max);
+  return String(number).padStart(2, "0");
 }
 
 // ── Услуги ─────────────────────────────────────────────────────────
@@ -239,13 +260,15 @@ function openServiceModal(id) {
   document.getElementById("modal-service-title").textContent = s ? "Редактировать услугу" : "Добавить услугу";
   document.getElementById("svc-id").value = s?.id || "";
   document.getElementById("svc-name").value = s?.name || "";
+  document.getElementById("svc-desc").value = s?.description || "";
   document.getElementById("modal-service").style.display = "flex";
 }
 
 async function saveService() {
   const id = document.getElementById("svc-id").value;
   const body = {
-    name: document.getElementById("svc-name").value
+    name: document.getElementById("svc-name").value,
+    description: document.getElementById("svc-desc").value,
   };
   if (id) {
     await api("PUT", `/admin/services/${id}`, body);

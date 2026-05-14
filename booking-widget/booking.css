@@ -673,4 +673,53 @@
   background: #444;
 }
 
+@media (max-width: 560px) {
+  #booking-modal {
+    align-items: stretch;
+  }
+
+  .booking-wrapper {
+    max-width: none;
+    height: 100%;
+    border-radius: 0;
+  }
+
+  .booking-step {
+    padding: 12px;
+  }
+
+  .booking-section-title {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .booking-summary {
+    margin-left: 8px;
+    margin-right: 8px;
+  }
+
+  .slots-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  #floating-booking {
+    width: 78px;
+    height: 78px;
+    right: 16px;
+    bottom: 16px;
+  }
+
+  #floating-booking span {
+    font-size: 12px;
+    line-height: 18px;
+    padding: 0 8px;
+  }
+}
+
 
