@@ -6,6 +6,7 @@ const API_URL = window.BARBERSHOP_API_URL
     : `${window.location.origin}/api`);
 const BARBERSHOP_TIME_ZONE = "Europe/Minsk";
 const FALLBACK_SPECIALIST_PHOTO = "images/home-page/mustache.png";
+const CLIENT_CABINET_URL = new URL("/client-cabinet.html", window.location.origin).toString();
 
 // Состояние виджета
 let bookingData = {};
@@ -685,13 +686,13 @@ function openClientCabinet() {
       if (data.token) {
         localStorage.setItem('client_token', data.token);
       }
-      window.open('/client-cabinet.html', '_blank');
+      window.open(CLIENT_CABINET_URL, '_blank');
     })
     .catch(() => {
-      window.open('/client-cabinet.html', '_blank');
+      window.open(CLIENT_CABINET_URL, '_blank');
     });
   } else {
-    window.open('/client-cabinet.html', '_blank');
+    window.open(CLIENT_CABINET_URL, '_blank');
   }
 }
 

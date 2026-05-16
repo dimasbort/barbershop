@@ -5,6 +5,8 @@ const API_URL = window.BARBERSHOP_API_URL
       ? "https://api.andreipalych.by/api"
     : `${window.location.origin}/api`);
 const BARBERSHOP_TIME_ZONE = "Europe/Minsk";
+const SITE_HOME_URL = new URL("/", window.location.origin).toString();
+const SITE_BOOKING_URL = new URL("/#booking", window.location.origin).toString();
 
 let clientToken = localStorage.getItem('client_token');
 let clientProfile = null;
@@ -435,7 +437,7 @@ async function cancelAppointment(id) {
 
 // Открыть виджет записи (переход на главную)
 function openBookingWidget() {
-  window.location.href = '/#booking';
+  window.location.href = SITE_BOOKING_URL;
 }
 
 // Альтернатива - открыть в том же окне виджет
@@ -448,7 +450,7 @@ function openBookingModal() {
     }
   } else {
     // Переходим на главную страницу
-    window.location.href = '/';
+    window.location.href = SITE_HOME_URL;
   }
 }
 
