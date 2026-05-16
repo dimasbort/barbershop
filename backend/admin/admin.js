@@ -410,7 +410,6 @@ async function deleteService(id) {
 // ── Связь специалист ↔ услуга ──────────────────────────────────────
 
 function openSSModal(specId, specName, svcId, svcName, price, duration) {
-  console.log('Bubu');
   document.getElementById("modal-ss-name").textContent = `${specName} — ${svcName}`;
   document.getElementById("ss-specialist-id").value = specId;
   document.getElementById("ss-service-id").value = svcId;
@@ -473,7 +472,6 @@ async function loadSchedule() {
 }
 
 async function toggleDate(date, specId, makeAvailable) {
-    console.log(date, 'hhh', makeAvailable);
   await api("POST", "/admin/available-dates", {
     specialistId: specId,
     date,

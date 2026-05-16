@@ -8,6 +8,7 @@ import Specialist from "../models/Specialist.js";
 import Service from "../models/Service.js";
 import PasswordResetCode from "../models/PasswordResetCode.js";
 import { sendSMS } from "../utils/sms.js";
+import { getJwtSecret } from "../middleware/auth.js";
 
 const router = express.Router();
 const RESET_CODE_TTL_MINUTES = 5;
@@ -26,7 +27,7 @@ function generateResetCode() {
 function createClientToken(client) {
   return jwt.sign(
     { id: client.id, phone: client.phone, name: client.name },
-    process.env.JWT_SECRET || "secretkey",
+    getJwtSecret(),
     { expiresIn: "5m" }
   );
 }
@@ -38,7 +39,7 @@ function verifyClient(req, res, next) {
 
   const token = authHeader.split(" ")[1];
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "secretkey");
+    const decoded = jwt.verify(token, getJwtSecret());
     req.client = decoded;
     next();
   } catch {
@@ -163,7 +164,7 @@ router.put("/password", verifyClient, async (req, res) => {
 
     const valid = await bcrypt.compare(current_password, client.password_hash);
     if (!valid) {
-      return res.status(401).json({ error: "Текущий пароль указан неверно" });
+      return res.status(400).json({ error: "Текущий пароль указан неверно" });
     }
 
     client.password_hash = await bcrypt.hash(new_password, 10);

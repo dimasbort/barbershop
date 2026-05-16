@@ -578,7 +578,6 @@ async function submitBookingNew() {
   const password = document.getElementById("client-password").value.trim();
   const gdprConsent = document.getElementById("gdpr-consent").checked;
   const errEl = document.getElementById("form-error");
-  console.log(phone);
 
   if (!name) {
     errEl.textContent = "Введите ваше имя.";

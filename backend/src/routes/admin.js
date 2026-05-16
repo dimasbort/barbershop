@@ -13,7 +13,7 @@ import Service from "../models/Service.js";
 import Specialist from "../models/Specialist.js";
 import AvailableDate from "../models/AvailableDate.js";
 import SpecialistService from "../models/SpecialistService.js";
-import { verifyAdmin } from "../middleware/auth.js";
+import { getJwtSecret, verifyAdmin } from "../middleware/auth.js";
 import { sendBookingConfirmation } from "../utils/scheduler.js";
 import sequelize from "../models/index.js";
 
@@ -33,7 +33,7 @@ router.post("/register", async (req, res) => {
   try {
     const { username, password } = req.body;
     if (!username || !password || password.length < 5) {
-      return res.status(400).json({ error: "Username and password with at least 8 characters are required" });
+      return res.status(400).json({ error: "Username and password with at least 5 characters are required" });
     }
 
     const adminsCount = await Admin.count();
@@ -42,7 +42,7 @@ router.post("/register", async (req, res) => {
       if (!authHeader) return res.status(403).json({ error: "Admin registration is closed" });
 
       const token = authHeader.split(" ")[1];
-      jwt.verify(token, process.env.JWT_SECRET || "secretkey");
+      jwt.verify(token, getJwtSecret());
     }
 
     const hash = await bcrypt.hash(password, 10);
@@ -74,7 +74,7 @@ router.post("/login", async (req, res) => {
 
   const token = jwt.sign(
     { id: admin.id },
-    process.env.JWT_SECRET || "secretkey",
+    getJwtSecret(),
     { expiresIn: "8h" }
   );
   res.json({ token });

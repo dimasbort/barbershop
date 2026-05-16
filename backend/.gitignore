@@ -1,2 +1,4 @@
 node_modules
 .env
+uploads/specialists/*
+!uploads/specialists/.gitkeep
