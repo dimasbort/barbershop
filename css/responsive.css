@@ -838,6 +838,29 @@ h2.big-text {font-size: 93px;}
 .navbar-toggle { border:none; }
 .navbar-inverse .navbar-toggle:hover, .navbar-inverse .navbar-toggle:focus { background-color:transparent; }
 .navbar-inverse .navbar-toggle:hover .navbar-inverse .icon-bar, .navbar-inverse .navbar-toggle:focus .navbar-inverse .icon-bar { background-color:#b59e5c; }
+
+.one-menu-top-mob .navbar-toggle:hover,
+.one-menu-top-mob .navbar-toggle:focus {
+    background: #1b1b1b;
+    border-color: #b59e5c;
+}
+
+.one-menu-top-mob .mob-menu ul {
+    margin: 0 auto;
+    background: rgba(28,28,28,0.98);
+    border-color: rgba(181,158,92,0.28);
+    padding: 8px;
+}
+
+.one-menu-top-mob .mob-menu ul li {
+    padding: 0 !important;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.one-menu-top-mob .mob-menu ul li a {
+    padding: 14px 12px;
+    font-size: 13px;
+}
 .main-team ul.cs-style-7 li { width:50%; margin-bottom:50px; }
 .main-team ul.cs-style-7 li figcaption ul.social li { margin-bottom:0; }
 .pricing-bg .main-pricing .price-block { margin-bottom:50px; }

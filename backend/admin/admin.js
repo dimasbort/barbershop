@@ -51,6 +51,7 @@ async function doLogin() {
 function doLogout() {
   token = "";
   localStorage.removeItem("ap_admin_token");
+  toggleAdminMenu(false);
   document.getElementById("screen-main").classList.remove("active");
   document.getElementById("screen-login").classList.add("active");
 }
@@ -83,10 +84,19 @@ function showPage(name) {
   document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
   document.getElementById(`page-${name}`).classList.add("active");
   document.querySelector(`[data-page="${name}"]`).classList.add("active");
+  toggleAdminMenu(false);
 
   if (name === "appointments") loadAppointments();
   if (name === "specialists") loadSpecialistsList();
   if (name === "services") loadServicesList();
+}
+
+function toggleAdminMenu(force) {
+  const main = document.getElementById("screen-main");
+  if (!main) return;
+  const shouldOpen = typeof force === "boolean" ? force : !main.classList.contains("menu-open");
+  main.classList.toggle("menu-open", shouldOpen);
+  document.body.classList.toggle("admin-menu-open", shouldOpen);
 }
 
 // ── Записи ─────────────────────────────────────────────────────────

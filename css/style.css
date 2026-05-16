@@ -3207,9 +3207,75 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#00000000', e
 @media (max-width: 767px) {
 
 #navbar3 {
-    background: #000;
-    padding: 0 !important;
-    margin-top: -2px;
+    background: transparent;
+    padding: 0 14px 14px !important;
+    margin-top: 10px;
+}
+
+.one-menu-top-mob {
+    background: rgba(17,17,17,0.96);
+    border-bottom: 1px solid rgba(181,158,92,0.25);
+}
+
+.one-menu-top-mob .container {
+    width: 100%;
+}
+
+.one-menu-top-mob .navbar-header {
+    padding: 10px 0 8px;
+}
+
+.one-menu-top-mob .navbar-toggle {
+    width: 100%;
+    margin: 12px 0 0;
+    padding: 12px 16px;
+    border: 1px solid rgba(181,158,92,0.45);
+    border-radius: 4px;
+    background: #1b1b1b;
+    color: #b59e5c;
+}
+
+.one-menu-top-mob .navbar-toggle span:first-child {
+    font-family: 'Roboto Slab', serif;
+    font-size: 13px;
+    letter-spacing: 3px;
+}
+
+.mob-menu ul {
+    width: 100%;
+    max-width: none;
+    margin: 0 auto;
+    padding: 8px;
+    background: rgba(28,28,28,0.98);
+    border: 1px solid rgba(181,158,92,0.28);
+    border-radius: 8px;
+    box-shadow: 0 18px 36px rgba(0,0,0,0.38);
+}
+
+.mob-menu ul li {
+    padding: 0;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.mob-menu ul li:last-child {
+    border-bottom: none;
+}
+
+.mob-menu ul li a {
+    display: block;
+    padding: 14px 12px;
+    border-radius: 6px;
+    color: #f5f1e7;
+    font-family: 'Roboto Slab', serif;
+    font-size: 13px;
+    letter-spacing: 1px;
+}
+
+.mob-menu ul li a:hover,
+.mob-menu ul li a:focus {
+    background: rgba(181,158,92,0.14);
+    color: #b59e5c;
+    text-decoration: none;
 }
 
 }

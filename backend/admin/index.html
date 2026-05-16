@@ -24,10 +24,13 @@
 
   <!-- ОСНОВНОЙ ЭКРАН -->
   <div id="screen-main" class="screen">
+    <button class="mobile-menu-btn" type="button" onclick="toggleAdminMenu(true)" aria-label="Открыть меню">☰</button>
+    <div class="mobile-menu-backdrop" onclick="toggleAdminMenu(false)"></div>
 
     <!-- Боковое меню -->
     <aside class="sidebar">
       <div class="sidebar-logo">✂ АП</div>
+      <button class="sidebar-close" type="button" onclick="toggleAdminMenu(false)" aria-label="Закрыть меню">×</button>
       <nav>
         <a class="nav-item active" data-page="appointments" onclick="showPage('appointments')">
           📋 Записи
@@ -103,15 +106,30 @@
         <span>Новая запись</span>
         <button onclick="closeModal('modal-appointment')">×</button>
       </div>
-      <input id="appt-phone" class="a-input" placeholder="Телефон клиента (+375...)">
-      <input id="appt-name" class="a-input" placeholder="Имя клиента (если новый номер)">
-      <select id="appt-specialist" class="a-select" onchange="updateAppointmentServices()">
-        <option value="">Выберите специалиста</option>
-      </select>
-      <select id="appt-service" class="a-select">
-        <option value="">Выберите услугу</option>
-      </select>
-      <input id="appt-datetime" class="a-input" type="datetime-local">
+      <label class="a-field">
+        <span>Телефон клиента</span>
+        <input id="appt-phone" class="a-input" placeholder="+375 XX XXX XX XX" inputmode="tel">
+      </label>
+      <label class="a-field">
+        <span>Имя клиента</span>
+        <input id="appt-name" class="a-input" placeholder="Нужно только для нового номера">
+      </label>
+      <label class="a-field">
+        <span>Специалист</span>
+        <select id="appt-specialist" class="a-select" onchange="updateAppointmentServices()">
+          <option value="">Выберите специалиста</option>
+        </select>
+      </label>
+      <label class="a-field">
+        <span>Услуга</span>
+        <select id="appt-service" class="a-select">
+          <option value="">Сначала выберите специалиста</option>
+        </select>
+      </label>
+      <label class="a-field">
+        <span>Дата и время записи</span>
+        <input id="appt-datetime" class="a-input" type="datetime-local">
+      </label>
       <div id="appt-error" class="error-msg" style="display:none"></div>
       <button class="a-btn" onclick="saveAppointment()">Создать запись</button>
     </div>
