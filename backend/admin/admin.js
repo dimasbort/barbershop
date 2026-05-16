@@ -1,12 +1,25 @@
 const API = window.BARBERSHOP_API_URL
-  || (["localhost", "127.0.0.1", ""].includes(window.location.hostname)
-    ? "http://localhost:4000/api"
+  || (isLocalHost(window.location.hostname)
+    ? `http://${window.location.hostname || "localhost"}:4000/api`
+    : isProductionHost(window.location.hostname)
+      ? "https://api.andreipalych.by/api"
     : `${window.location.origin}/api`);
 const BARBERSHOP_TIME_ZONE = "Europe/Minsk";
 let token = localStorage.getItem("ap_admin_token") || "";
 let allSpecialists = [];
 let allServices = [];
 const weekdays = ["mon","tue","wed","thu","fri","sat","sun"];
+
+function isLocalHost(hostname) {
+  return ["localhost", "127.0.0.1", ""].includes(hostname)
+    || /^192\.168\./.test(hostname)
+    || /^10\./.test(hostname)
+    || /^172\.(1[6-9]|2\d|3[01])\./.test(hostname);
+}
+
+function isProductionHost(hostname) {
+  return hostname === "andreipalych.by" || hostname === "www.andreipalych.by";
+}
 
 // ── Инициализация ──────────────────────────────────────────────────
 
@@ -117,6 +130,58 @@ async function deleteAppointment(id) {
   loadAppointments();
 }
 
+function openAppointmentModal() {
+  document.getElementById("appt-phone").value = "";
+  document.getElementById("appt-name").value = "";
+  document.getElementById("appt-datetime").value = "";
+  document.getElementById("appt-error").style.display = "none";
+
+  const specialistSel = document.getElementById("appt-specialist");
+  specialistSel.innerHTML = `<option value="">Выберите специалиста</option>`;
+  allSpecialists.forEach(s => {
+    specialistSel.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+  });
+  updateAppointmentServices();
+
+  document.getElementById("modal-appointment").style.display = "flex";
+}
+
+function updateAppointmentServices() {
+  const specialistId = Number(document.getElementById("appt-specialist").value);
+  const serviceSel = document.getElementById("appt-service");
+  const specialist = allSpecialists.find(s => s.id === specialistId);
+
+  serviceSel.innerHTML = `<option value="">Выберите услугу</option>`;
+  (specialist?.Services || []).forEach(service => {
+    const link = service.SpecialistService;
+    const details = link ? ` · ${link.duration_min} мин · ${link.price} BYN` : "";
+    serviceSel.innerHTML += `<option value="${service.id}">${service.name}${details}</option>`;
+  });
+}
+
+async function saveAppointment() {
+  const errEl = document.getElementById("appt-error");
+  errEl.style.display = "none";
+
+  const dateValue = document.getElementById("appt-datetime").value;
+  const body = {
+    client_phone: document.getElementById("appt-phone").value.trim(),
+    client_name: document.getElementById("appt-name").value.trim(),
+    specialistId: document.getElementById("appt-specialist").value,
+    serviceId: document.getElementById("appt-service").value,
+    datetime_start: dateValue ? new Date(dateValue).toISOString() : "",
+  };
+
+  try {
+    await api("POST", "/admin/appointments", body);
+    closeModal("modal-appointment");
+    await loadAppointments();
+  } catch (err) {
+    errEl.textContent = "Не удалось создать запись. Проверьте телефон, услугу и время.";
+    errEl.style.display = "block";
+  }
+}
+
 // ── Специалисты ────────────────────────────────────────────────────
 
 async function loadSpecialistsList() {
@@ -175,6 +240,8 @@ function openSpecialistModal(id) {
   document.getElementById("sp-name").value = s?.name || "";
   document.getElementById("sp-photo").value = s?.photo || "";
   document.getElementById("sp-desc").value = s?.description || "";
+  document.getElementById("sp-photo-file").value = "";
+  updatePhotoPreview(s?.photo || "");
 
   // Редактор расписания
   const labels = ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"];
@@ -235,6 +302,59 @@ function normalizeTimePart(value, max) {
 
   const number = Math.min(Number(digits), max);
   return String(number).padStart(2, "0");
+}
+
+function updatePhotoPreview(src) {
+  const preview = document.getElementById("sp-photo-preview");
+  const status = document.getElementById("sp-photo-status");
+  if (src) {
+    preview.src = src;
+    preview.style.display = "block";
+    status.textContent = "Фото прикреплено";
+  } else {
+    preview.removeAttribute("src");
+    preview.style.display = "none";
+    status.textContent = "Файл JPG, PNG или WEBP до 3 МБ";
+  }
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function uploadSpecialistPhoto(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+
+  const status = document.getElementById("sp-photo-status");
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+    status.textContent = "Выберите JPG, PNG или WEBP";
+    input.value = "";
+    return;
+  }
+  if (file.size > 3 * 1024 * 1024) {
+    status.textContent = "Фото должно быть меньше 3 МБ";
+    input.value = "";
+    return;
+  }
+
+  status.textContent = "Загружаем фото...";
+  try {
+    const dataUrl = await readFileAsDataUrl(file);
+    const result = await api("POST", "/admin/specialists/photo", {
+      fileName: file.name,
+      dataUrl,
+    });
+    document.getElementById("sp-photo").value = result.url;
+    updatePhotoPreview(result.url);
+  } catch (err) {
+    status.textContent = "Не удалось загрузить фото";
+  }
 }
 
 // ── Услуги ─────────────────────────────────────────────────────────

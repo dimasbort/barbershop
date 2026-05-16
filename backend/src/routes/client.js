@@ -126,6 +126,15 @@ router.put("/profile", verifyClient, async (req, res) => {
 
     client.name = name;
     await client.save();
+    await Appointment.update(
+      { client_name: name },
+      {
+        where: {
+          clientId: client.id,
+          datetime_start: { [Op.gte]: new Date() },
+        },
+      }
+    );
 
     res.json({
       client: {
@@ -241,6 +250,46 @@ router.post("/password-reset/request", async (req, res) => {
 });
 
 // Подтвердить SMS-код и установить новый пароль
+router.post("/password-reset/verify", async (req, res) => {
+  try {
+    const phone = normalizeBelarusPhone(req.body.phone);
+    const code = String(req.body.code || "").trim();
+
+    if (!phone || !/^\d{6}$/.test(code)) {
+      return res.status(400).json({ error: "Укажите телефон и 6-значный код" });
+    }
+
+    const client = await Client.findOne({ where: { phone } });
+    if (!client) {
+      return res.status(404).json({ error: "Клиент с таким номером не найден" });
+    }
+
+    const reset = await PasswordResetCode.findOne({
+      where: {
+        clientId: client.id,
+        phone,
+        used_at: null,
+        expires_at: { [Op.gt]: new Date() },
+      },
+      order: [["createdAt", "DESC"]],
+    });
+
+    if (!reset) {
+      return res.status(400).json({ error: "Код не найден или срок действия истёк" });
+    }
+
+    const validCode = await bcrypt.compare(code, reset.code_hash);
+    if (!validCode) {
+      return res.status(400).json({ error: "Неверный код восстановления" });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 router.post("/password-reset/confirm", async (req, res) => {
   try {
     const phone = normalizeBelarusPhone(req.body.phone);

@@ -148,6 +148,11 @@ body {
   cursor: pointer;
 }
 
+.modal-box .a-select {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
 .a-btn {
   width: 100%;
   background: #b59e5c;
@@ -165,6 +170,53 @@ body {
 .a-btn.small { width: auto; padding: 8px 18px; font-size: 14px; margin-top: 0; }
 .a-btn.danger { background: #c0392b; color: #fff; }
 .a-btn.danger:hover { background: #e74c3c; }
+
+.photo-picker {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  background: #202020;
+  border: 1px solid #333;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  padding: 12px;
+}
+
+.photo-picker img {
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #111;
+  flex-shrink: 0;
+}
+
+.photo-picker-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.photo-picker-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.photo-picker-sub {
+  color: #888;
+  font-size: 12px;
+  margin-bottom: 10px;
+  overflow-wrap: anywhere;
+}
+
+.photo-picker-btn {
+  display: inline-block;
+  text-align: center;
+}
+
+.photo-picker-btn input {
+  display: none;
+}
 
 .a-label {
   font-size: 13px;
@@ -393,34 +445,48 @@ body {
     min-height: auto;
     border-right: none;
     border-bottom: 1px solid #2a2a2a;
-    padding: 12px 0;
+    padding: 8px 0;
+    position: sticky;
+    top: 0;
+    z-index: 20;
   }
 
   .sidebar-logo {
-    padding-bottom: 12px;
-    margin-bottom: 10px;
+    display: none;
   }
 
   .sidebar nav {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
     gap: 6px;
-    padding: 0 12px;
+    overflow-x: auto;
+    padding: 0 96px 0 8px;
+    scrollbar-width: none;
+  }
+
+  .sidebar nav::-webkit-scrollbar {
+    display: none;
   }
 
   .nav-item {
     border-left: none;
     border-radius: 8px;
-    padding: 10px 12px;
+    flex: 0 0 auto;
+    padding: 8px 10px;
+    font-size: 13px;
     text-align: center;
+    white-space: nowrap;
   }
 
   .logout-btn {
-    margin: 12px;
+    margin: 0;
+    padding: 8px 10px;
+    position: absolute;
+    top: 8px;
+    right: 8px;
   }
 
   .main-content {
-    padding: 20px 14px;
+    padding: 16px 12px;
   }
 
   .page-header,
@@ -429,6 +495,16 @@ body {
     align-items: stretch;
     flex-direction: column;
     gap: 12px;
+  }
+
+  .filter-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .filter-row .a-btn,
+  .filter-row .a-select {
+    width: 100%;
   }
 
   .item-actions {

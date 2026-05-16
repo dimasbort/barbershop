@@ -1,14 +1,35 @@
 const API_URL = window.BARBERSHOP_API_URL
-  || (["localhost", "127.0.0.1", ""].includes(window.location.hostname)
-    ? "http://localhost:4000/api"
+  || (isLocalHost(window.location.hostname)
+    ? `http://${window.location.hostname || "localhost"}:4000/api`
+    : isProductionHost(window.location.hostname)
+      ? "https://api.andreipalych.by/api"
     : `${window.location.origin}/api`);
 const BARBERSHOP_TIME_ZONE = "Europe/Minsk";
+const FALLBACK_SPECIALIST_PHOTO = "images/home-page/mustache.png";
 
 // Состояние виджета
 let bookingData = {};
 let availableDays = [];
 let currentMonth = new Date().getMonth();
 let currentYear = new Date().getFullYear();
+
+function isLocalHost(hostname) {
+  return ["localhost", "127.0.0.1", ""].includes(hostname)
+    || /^192\.168\./.test(hostname)
+    || /^10\./.test(hostname)
+    || /^172\.(1[6-9]|2\d|3[01])\./.test(hostname);
+}
+
+function isProductionHost(hostname) {
+  return hostname === "andreipalych.by" || hostname === "www.andreipalych.by";
+}
+
+function resolveAssetUrl(url, fallback = FALLBACK_SPECIALIST_PHOTO) {
+  if (!url) return fallback;
+  if (/^(https?:)?\/\//.test(url) || url.startsWith("data:")) return url;
+  if (url.startsWith("/uploads/")) return `${API_URL.replace(/\/api$/, "")}${url}`;
+  return url;
+}
 
 document.addEventListener("DOMContentLoaded", () => {
   // Создаём модальное окно
@@ -111,8 +132,8 @@ async function loadSpecialists() {
   document.getElementById("step-specialist").innerHTML = `
     <div class="booking-section-title">Выберите специалиста</div>
     ${specialists.map(s => `
-      <div class="booking-card" onclick="chooseSpecialist(${s.id}, '${s.name}', '${s.photo || ""}', '${s.description}')">
-        <img src="${s.photo || "images/home-page/mustache.png"}" onerror="this.src='images/home-page/mustache.png'">
+      <div class="booking-card" onclick="chooseSpecialist(${s.id}, '${s.name}', '${resolveAssetUrl(s.photo, "")}', '${s.description || ""}')">
+        <img src="${resolveAssetUrl(s.photo)}" onerror="this.src='${FALLBACK_SPECIALIST_PHOTO}'">
         <div>
           <div class="booking-card-title">${s.name}</div>
           <div class="booking-card-sub">${s.description}</div>
@@ -353,7 +374,7 @@ function renderClientForm() {
     <div class="booking-summary">
       <div class="summary-row">
         <img src="${bookingData.specialistPhoto || "images/home-page/mustache.png"}"
-             onerror="this.src='images/home-page/mustache.png'"
+             onerror="this.src='${FALLBACK_SPECIALIST_PHOTO}'"
              class="summary-avatar">
         <div>
           <div class="summary-name">${bookingData.specialistName}</div>
@@ -408,8 +429,6 @@ function renderClientForm() {
           </div>
         </div>
       </div>
-      
-      <input id="client-password" class="booking-input" type="password" placeholder="Введите ваш пароль *" required>
       
       <div class="form-actions">
         <button class="booking-btn secondary" onclick="goBackToPhoneCheck()">Назад</button>
@@ -515,47 +534,16 @@ function goBackToPhoneCheck() {
 // Запись для существующего клиента
 async function submitBookingExisting() {
   const phone = "+375" + clientPhone;
-  const password = document.getElementById("client-password").value.trim();
   const errEl = document.getElementById("form-error");
 
-  if (!password) {
-    errEl.textContent = "Введите пароль.";
-    errEl.style.display = "block";
-    return;
-  }
-
-  // Сначала авторизуемся
   try {
-    const authRes = await fetch(`${API_URL}/client/auth`, {
-      method: "POST", 
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({
-        phone,
-        password,
-        mode: "login"
-      }),
-    });
-
-    const authData = await authRes.json();
-    
-    if (authData.error) {
-      errEl.textContent = authData.error;
-      errEl.style.display = "block";
-      return;
-    }
-    if (authData.token) {
-      localStorage.setItem("client_token", authData.token);
-    }
-
-    // Теперь создаём запись
     const appointmentData = {
       specialistId: bookingData.specialistId,
       serviceId: bookingData.serviceId,
       client_name: existingClient.name,
       client_phone: phone,
-      client_password: password,
       datetime_start: bookingData.datetime_start,
-      gdpr_consent: true, // уже был дан при регистрации
+      gdpr_consent: true,
     };
 
     const bookingRes = await fetch(`${API_URL}/appointments`, {
@@ -574,7 +562,7 @@ async function submitBookingExisting() {
 
     // Успех
     goToStep("success");
-    showSuccessStep(existingClient.name, phone.replace("+375", ""), "***", true);
+    showSuccessStep(existingClient.name, phone.replace("+375", ""), "", true);
 
   } catch (err) {
     errEl.textContent = "Ошибка сети. Попробуйте еще раз.";
@@ -646,6 +634,7 @@ async function submitBookingNew() {
 // Показ экрана успеха
 function showSuccessStep(name, phone, password, isExisting) {
   const dt = new Date(bookingData.datetime_start);
+  const passwordRow = isExisting ? "" : `<div>Пароль: <strong>${password}</strong></div>`;
   
   document.getElementById("step-success").innerHTML = `
     <div class="booking-success">
@@ -661,7 +650,7 @@ function showSuccessStep(name, phone, password, isExisting) {
         <p>${isExisting ? 'Войдите в личный кабинет для управления записями:' : 'Ваш личный кабинет создан! Данные для входа:'}</p>
         <div class="cabinet-credentials">
           <div>Телефон: <strong>+375${phone}</strong></div>
-          <div>Пароль: <strong>${password === "***" ? "ваш пароль" : password}</strong></div>
+          ${passwordRow}
         </div>
         <button class="booking-btn" onclick="openClientCabinet()" style="margin-top:15px">
           Войти в личный кабинет

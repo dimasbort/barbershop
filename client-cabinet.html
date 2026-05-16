@@ -82,6 +82,13 @@
       padding: 8px 16px;
       font-size: 14px;
     }
+    .booking-btn.secondary {
+      background: #333;
+      color: #fff;
+    }
+    .booking-btn.secondary:hover {
+      background: #444;
+    }
     .form-error {
       color: #e05c5c;
       font-size: 13px;
@@ -116,7 +123,13 @@
     .profile-panel h3 {
       color: #b59e5c;
       font-size: 18px;
-      margin: 0 0 14px;
+      margin: 0;
+    }
+    .profile-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
     }
     .profile-grid {
       display: grid;
@@ -219,13 +232,22 @@
       .cabinet-top {
         align-items: stretch;
         flex-direction: column;
-        gap: 14px;
+        gap: 10px;
+        margin-bottom: 16px;
       }
-      .cabinet-top > div {
-        flex-direction: column;
+      .cabinet-actions {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px !important;
       }
       .booking-btn.small {
         width: 100%;
+        min-width: 0;
+        padding-left: 10px;
+        padding-right: 10px;
+      }
+      .cabinet-actions .booking-btn:last-child {
+        grid-column: 1 / -1;
       }
       .appointment-item {
         align-items: stretch;
@@ -272,11 +294,17 @@
           <input id="reset-phone" class="booking-input" placeholder="Номер телефона (+375...)">
           <div id="reset-request-error" class="form-error" style="display: none;"></div>
           <div id="reset-request-success" class="form-success" style="display: none;"></div>
-          <button class="booking-btn" onclick="requestPasswordReset()">Получить SMS-код</button>
+          <button id="reset-request-btn" class="booking-btn" onclick="requestPasswordReset()">Получить SMS-код</button>
         </div>
 
         <div id="reset-step-code" style="display: none;">
           <input id="reset-code" class="booking-input" inputmode="numeric" maxlength="6" placeholder="Код из SMS">
+          <div id="reset-verify-error" class="form-error" style="display: none;"></div>
+          <div id="reset-verify-success" class="form-success" style="display: none;"></div>
+          <button id="reset-verify-btn" class="booking-btn" onclick="verifyPasswordResetCode()">Проверить код</button>
+        </div>
+
+        <div id="reset-step-password" style="display: none;">
           <input id="reset-new-password" class="booking-input" type="password" placeholder="Новый пароль">
           <div id="reset-confirm-error" class="form-error" style="display: none;"></div>
           <button class="booking-btn" onclick="confirmPasswordReset()">Сменить пароль</button>
@@ -292,14 +320,18 @@
     <div id="cabinet-content" class="screen">
       <div class="cabinet-top">
         <h2>Мои записи</h2>
-        <div style="display: flex; gap: 10px;">
+        <div class="cabinet-actions" style="display: flex; gap: 10px;">
           <button class="booking-btn small" onclick="openBookingWidget()">+ Новая запись</button>
+          <button class="booking-btn small secondary" onclick="toggleProfilePanel()">Профиль</button>
           <button class="booking-btn small" onclick="clientLogout()">Выйти</button>
         </div>
       </div>
 
-      <div class="profile-panel">
-        <h3>Профиль</h3>
+      <div id="profile-panel" class="profile-panel" style="display: none;">
+        <div class="profile-header">
+          <h3>Профиль</h3>
+          <button class="text-link" onclick="toggleProfilePanel(false)">Закрыть</button>
+        </div>
         <div class="profile-grid">
           <div class="profile-section">
             <div class="profile-section-title">Имя</div>

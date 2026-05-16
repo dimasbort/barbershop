@@ -1,12 +1,26 @@
 const API_URL = window.BARBERSHOP_API_URL
-  || (["localhost", "127.0.0.1", ""].includes(window.location.hostname)
-    ? "http://localhost:4000/api"
+  || (isLocalHost(window.location.hostname)
+    ? `http://${window.location.hostname || "localhost"}:4000/api`
+    : isProductionHost(window.location.hostname)
+      ? "https://api.andreipalych.by/api"
     : `${window.location.origin}/api`);
 const BARBERSHOP_TIME_ZONE = "Europe/Minsk";
 
 let clientToken = localStorage.getItem('client_token');
 let clientProfile = null;
 let resetPhone = null;
+let verifiedResetCode = null;
+
+function isLocalHost(hostname) {
+  return ["localhost", "127.0.0.1", ""].includes(hostname)
+    || /^192\.168\./.test(hostname)
+    || /^10\./.test(hostname)
+    || /^172\.(1[6-9]|2\d|3[01])\./.test(hostname);
+}
+
+function isProductionHost(hostname) {
+  return hostname === "andreipalych.by" || hostname === "www.andreipalych.by";
+}
 
 // Инициализация при загрузке страницы
 window.addEventListener('DOMContentLoaded', () => {
@@ -32,6 +46,13 @@ function showResetForm() {
   document.getElementById('cabinet-content').classList.remove('active');
   document.getElementById('reset-step-phone').style.display = 'block';
   document.getElementById('reset-step-code').style.display = 'none';
+  document.getElementById('reset-step-password').style.display = 'none';
+  document.getElementById('reset-request-btn').style.display = 'block';
+  document.getElementById('reset-phone').disabled = false;
+  document.getElementById('reset-code').disabled = false;
+  document.getElementById('reset-verify-btn').style.display = 'block';
+  resetPhone = null;
+  verifiedResetCode = null;
 }
 
 // Показать содержимое кабинета
@@ -132,6 +153,15 @@ async function loadProfile() {
   }
 }
 
+function toggleProfilePanel(force) {
+  const panel = document.getElementById('profile-panel');
+  const shouldShow = typeof force === 'boolean' ? force : panel.style.display === 'none';
+  panel.style.display = shouldShow ? 'block' : 'none';
+  if (shouldShow && clientProfile) {
+    document.getElementById('profile-name').value = clientProfile.name || '';
+  }
+}
+
 async function updateProfileName() {
   const name = document.getElementById('profile-name').value.trim();
   const msgEl = document.getElementById('profile-name-message');
@@ -158,6 +188,7 @@ async function updateProfileName() {
     }
     msgEl.textContent = 'Имя сохранено';
     msgEl.style.display = 'block';
+    loadAppointments();
   } catch (err) {
     errEl.textContent = err.message || 'Ошибка сети';
     errEl.style.display = 'block';
@@ -221,6 +252,8 @@ async function requestPasswordReset() {
     resetPhone = phone;
     msgEl.textContent = `Код отправлен. Он действует ${data.expires_in_minutes || 5} минут.`;
     msgEl.style.display = 'block';
+    document.getElementById('reset-request-btn').style.display = 'none';
+    document.getElementById('reset-phone').disabled = true;
     document.getElementById('reset-step-code').style.display = 'block';
   } catch (err) {
     errEl.textContent = 'Ошибка сети. Попробуйте еще раз.';
@@ -228,11 +261,52 @@ async function requestPasswordReset() {
   }
 }
 
-async function confirmPasswordReset() {
+async function verifyPasswordResetCode() {
   const code = document.getElementById('reset-code').value.trim();
+  const errEl = document.getElementById('reset-verify-error');
+  const msgEl = document.getElementById('reset-verify-success');
+  errEl.style.display = 'none';
+  msgEl.style.display = 'none';
+
+  try {
+    const res = await fetch(`${API_URL}/client/password-reset/verify`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        phone: resetPhone || document.getElementById('reset-phone').value.trim(),
+        code,
+      }),
+    });
+    const data = await res.json();
+
+    if (!res.ok || data.error) {
+      errEl.textContent = data.error || 'Код не подошёл';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    verifiedResetCode = code;
+    document.getElementById('reset-code').disabled = true;
+    document.getElementById('reset-verify-btn').style.display = 'none';
+    msgEl.textContent = 'Код подтверждён';
+    msgEl.style.display = 'block';
+    document.getElementById('reset-step-password').style.display = 'block';
+  } catch (err) {
+    errEl.textContent = 'Ошибка сети. Попробуйте еще раз.';
+    errEl.style.display = 'block';
+  }
+}
+
+async function confirmPasswordReset() {
   const newPassword = document.getElementById('reset-new-password').value.trim();
   const errEl = document.getElementById('reset-confirm-error');
   errEl.style.display = 'none';
+
+  if (!verifiedResetCode) {
+    errEl.textContent = 'Сначала подтвердите код из SMS';
+    errEl.style.display = 'block';
+    return;
+  }
 
   try {
     const res = await fetch(`${API_URL}/client/password-reset/confirm`, {
@@ -240,7 +314,7 @@ async function confirmPasswordReset() {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
         phone: resetPhone || document.getElementById('reset-phone').value.trim(),
-        code,
+        code: verifiedResetCode,
         new_password: newPassword,
       }),
     });

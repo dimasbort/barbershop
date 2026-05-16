@@ -25,7 +25,7 @@ import { initScheduler } from "./utils/scheduler.js";
 
 const app = express();
 app.use(cors({ origin: "*" }));
-app.use(express.json());
+app.use(express.json({ limit: "8mb" }));
 
 app.use("/api/specialists", specialistsRouter);
 app.use("/api/services", servicesRouter);
@@ -37,6 +37,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 // Отдаём папку admin как статику
 app.use("/admin", express.static(path.join(__dirname, "../admin")));
 

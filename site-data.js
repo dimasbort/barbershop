@@ -1,7 +1,27 @@
 const API_URL = window.BARBERSHOP_API_URL
-  || (["localhost", "127.0.0.1", ""].includes(window.location.hostname)
-    ? "http://localhost:4000/api"
+  || (isLocalHost(window.location.hostname)
+    ? `http://${window.location.hostname || "localhost"}:4000/api`
+    : isProductionHost(window.location.hostname)
+      ? "https://api.andreipalych.by/api"
     : `${window.location.origin}/api`);
+
+function isLocalHost(hostname) {
+  return ["localhost", "127.0.0.1", ""].includes(hostname)
+    || /^192\.168\./.test(hostname)
+    || /^10\./.test(hostname)
+    || /^172\.(1[6-9]|2\d|3[01])\./.test(hostname);
+}
+
+function isProductionHost(hostname) {
+  return hostname === "andreipalych.by" || hostname === "www.andreipalych.by";
+}
+
+function resolveAssetUrl(url, fallback) {
+  if (!url) return fallback;
+  if (/^(https?:)?\/\//.test(url) || url.startsWith("data:")) return url;
+  if (url.startsWith("/uploads/")) return `${API_URL.replace(/\/api$/, "")}${url}`;
+  return url;
+}
 
 document.addEventListener("DOMContentLoaded", async () => {
   try {
@@ -26,7 +46,7 @@ function renderTeam(specialists) {
     <li>
       <img
         class="img-responsive"
-        src="${s.photo || "images/home-page/andrew.jpg"}"
+        src="${resolveAssetUrl(s.photo, "images/home-page/andrew.jpg")}"
         alt="${s.name}"
         onerror="this.src='images/home-page/andrew.jpg'"
       >

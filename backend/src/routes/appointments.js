@@ -84,9 +84,9 @@ router.post("/", async (req, res) => {
 
     const normalizedPhone = normalizeBelarusPhone(client_phone);
 
-    if (!client_name || !normalizedPhone || !client_password || !datetime_start) {
+    if (!client_name || !normalizedPhone || !datetime_start) {
       return res.status(400).json({ 
-        error: "Заполните имя, телефон, пароль и время записи" 
+        error: "Заполните имя, телефон и время записи"
       });
     }
 
@@ -166,6 +166,11 @@ router.post("/", async (req, res) => {
       });
 
       if (!client) {
+        if (!client_password || String(client_password).length < 4) {
+          const err = new Error("Для первой записи придумайте пароль не короче 4 символов");
+          err.status = 400;
+          throw err;
+        }
         const password_hash = await bcrypt.hash(client_password, 10);
         client = await Client.create({
           phone: normalizedPhone,
@@ -173,13 +178,6 @@ router.post("/", async (req, res) => {
           password_hash,
           gdpr_consent: true,
         }, { transaction });
-      } else {
-        const validPassword = await bcrypt.compare(client_password, client.password_hash);
-        if (!validPassword) {
-          const err = new Error("Неверный пароль от личного кабинета");
-          err.status = 401;
-          throw err;
-        }
       }
 
       // Создаём запись
