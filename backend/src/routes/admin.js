@@ -32,8 +32,8 @@ function normalizeBelarusPhone(phone) {
 router.post("/register", async (req, res) => {
   try {
     const { username, password } = req.body;
-    if (!username || !password || password.length < 5) {
-      return res.status(400).json({ error: "Username and password with at least 5 characters are required" });
+    if (!username || !password || password.length < 8) {
+      return res.status(400).json({ error: "Username and password with at least 8 characters are required" });
     }
 
     const adminsCount = await Admin.count();
